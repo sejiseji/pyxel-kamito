@@ -343,16 +343,19 @@ class MyApp:
                         # 衝突したら何らかの処理を行う
                         # キャラクターの移動をキャンセルする
                         character.cancel_move()
+
+                        for obj in self.wk_objectDrawlistBasedAxisY:
+                            ###playingではないオブジェクトのx座標のスクロール加味を戻す
+                            if not(obj.is_playing) :
+                                obj.x += self.scroll_distance
+                                # obj.x += self.scroll_x
+
                         ###スクロール背景用　のX軸方向オフセットの増分をキャンセル
                         if (self.scroll_direction == 1):
                             self.scroll_x -= C_PLAYER_MOVE_SPEED
                         elif (self.scroll_direction == -1):
                             self.scroll_x += C_PLAYER_MOVE_SPEED
-                        ###
-                        for obj in self.wk_objectDrawlistBasedAxisY:
-                            ###playingではないオブジェクトのx座標のスクロール加味を戻す
-                            if not(obj.is_playing) :
-                                obj.x += self.scroll_distance
+
                         # 背景のパララックススクロールの方向を０へ
                         self.scroll_direction = 0
 
@@ -410,7 +413,7 @@ class MyApp:
 
 
         ###デモタイトルを表示
-        self.bdf2.draw_text(10, 2, ">>開発中画面", 7) 
+        self.bdf2.draw_text(10, 2, ">>開発中です", 7) 
         
         ###updateで並び替えたオブジェクトリストを順にdrawする
         for obj in self.wk_objectDrawlistBasedAxisY:
