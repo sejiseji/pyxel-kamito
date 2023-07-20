@@ -304,17 +304,19 @@ class MyApp:
         self.gamestate.text_display = self.pressed_space_checking
         self.player.env_text_displaying = self.pressed_space_checking
 
-        # 左パララックススクロール背景のため、左右キーの入力を読み取り、その方向を更新
-        if (0 < self.player.x <= (300 - self.player.width)) and (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A)):
-            self.scroll_direction = -1
-            if (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S)):
+        ###space打鍵によるチェックが走っていないとき（キャラ操作可能時）に左右キーでスクロールが有効化される
+        if not(self.pressed_space_checking):
+            # 左パララックススクロール背景のため、左右キーの入力を読み取り、その方向を更新
+            if (0 < self.player.x <= (300 - self.player.width)) and (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A)):
+                self.scroll_direction = -1
+                if (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S)):
+                    self.scroll_direction = 0
+            elif (0 <= self.player.x < (300 - self.player.width)) and (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S)):
+                self.scroll_direction = 1
+                if (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A)):
+                    self.scroll_direction = 0
+            else:
                 self.scroll_direction = 0
-        elif (0 <= self.player.x < (300 - self.player.width)) and (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S)):
-            self.scroll_direction = 1
-            if (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A)):
-                self.scroll_direction = 0
-        else:
-            self.scroll_direction = 0
 
     # 有効な左右スクロール方向に応じてX方向スクロール位置を加算・減算する
         self.scroll_distance = 0
@@ -365,7 +367,8 @@ class MyApp:
         ###入力検知の遅延用カウンタ（ボタン打鍵の瞬間の連続検知を防ぐ）
         if(self.inputdelay_cnt > 0):
             self.inputdelay_cnt -= 1
-        if(self.inputdelay_cnt == 0):
+        ###スクロールが働いていないときだけボタン入力を検知する
+        if((self.inputdelay_cnt == 0)and(self.scroll_direction == 0)):
             ###ボタン入力の検知（スペース）
             self.updateBtnInputCheck_Space()
         ###表示が必要なテキスト情報を保持していた場合、表示に必要な分割処理を行う。
