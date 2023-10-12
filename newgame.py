@@ -1295,7 +1295,7 @@ class MyApp:
                     ###葉の描画
                     pyxel.blt(x - scroll_memory[0], y, 2, 0, 192, 16, 16, 0)
                     ###光点の描画
-                    pyxel.pset(x + 8 - scroll_memory[0], y + 8, point_color)
+                    # pyxel.pset(x + 8 - scroll_memory[0], y + 8, point_color)
                 ###draw後にscroll加味を戻す
                 ###本来のスクロールを加味しない位置に戻す
                 tree.x += self.scroll_x
