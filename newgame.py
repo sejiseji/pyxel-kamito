@@ -325,9 +325,9 @@ class MyApp:
     
     def generateUniqueObjectsInWood(self):
         ###木オブジェクトを生成 : x=50, y=100, 葉の数=90, 茂みの半径=30
-        self.tree01 = Tree(150, 100, 110, 30)
-        self.tree01.update() # 葉の座標を1発目更新
-        self.trees.append(self.tree01)
+        # self.tree01 = Tree(150, 100, 110, 30)
+        # self.tree01.update() # 葉の座標を1発目更新
+        # self.trees.append(self.tree01)
         self.tree02 = Tree(250, 100, 130, 40)
         self.tree02.update() # 葉の座標を1発目更新
         self.trees.append(self.tree02)
@@ -338,11 +338,11 @@ class MyApp:
         ataris.append(self.atari005)
         ataris.append(self.atari006)
         ###草オブジェクトを生成 : x=10, y=230, 距離=150, 最小の高さ=20, 最大の高さ=50, 草の本数=30
-        self.grass01 = Grass(0, 240, 600, 20, 60, 140)
+        self.grass01 = Grass(0, 240, 600, 20, 60, 100)
         self.grasses.append(self.grass01)
         ###花オブジェクトを生成
         # Stemをランダムな位置に生成
-        for _ in range(5):
+        for _ in range(4):
             x = Random.randint(10, 550)  # X座標を10から550の間でランダムに選択
             height = Random.randint(40, 60)  # 高さを40から60の間でランダムに選択
             flower = Stem(x, 240, height)
