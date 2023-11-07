@@ -15,6 +15,7 @@ class EllipticalOrbit:
         self.color = color
         self.parent = parent  # 追加：親となるオブジェクトを参照
         self.x, self.y, self.z = 0, 0, 0
+        self.draw_x, self.draw_y = 0, 0
         self.update()  # Initialize the position
 
     def update(self):

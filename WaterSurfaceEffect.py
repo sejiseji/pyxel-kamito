@@ -20,6 +20,9 @@ class WaterSurfaceEffect:
 
         self.stretch_increment = random.choice([0.2, 0.3, 0.4]) # 伸縮の変化量
 
+        self.draw_x = 0
+        self.draw_y = 0
+
     def generate_reflection(self):
         x = random.randint(self.x_start, self.x_start + self.width)
         y = random.randint(self.y_start, self.y_start + self.height)

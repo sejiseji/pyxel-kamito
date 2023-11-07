@@ -7,6 +7,8 @@ class EchoChamberVisualizer:
     SILVER_RATIO = 2.4142135623
 
     def __init__(self, x_center, y_center, r, treeangle, max_depth, polygon_sides=6, external=False, firstlength=None):
+        self.x = x_center
+        self.y = y_center
         self.x_center = x_center
         self.y_center = y_center
         self.r = r
@@ -26,7 +28,7 @@ class EchoChamberVisualizer:
         pyxel.mouse(True)
 
         self.frame_count = 0
-        self.max_frame_count = 80
+        self.max_frame_count = 160
         # self.max_frame_count = random.randint(50, 150)
 
         self.x_new = 0
@@ -38,6 +40,8 @@ class EchoChamberVisualizer:
         self.external_new = False
         self.firstlength_new = 0
 
+        self.draw_x = 0
+        self.draw_y = 0
 
     def update(self):
         ###frame_countをインクリメントし、max_frame_countに達したらburst()を呼び出す
@@ -71,7 +75,7 @@ class EchoChamberVisualizer:
             y_new_potential = self.y_center + math.sin(angle) * distance
             
             # x_new, y_newが画面内に収まるか確認
-            if 0 < x_new_potential < pyxel.width and 0 < y_new_potential < pyxel.height:
+            if 0 < x_new_potential < 600 and 0 < y_new_potential < pyxel.height:
                 self.x_new = x_new_potential
                 self.y_new = y_new_potential
                 break  # 画面内に収まる座標が見つかった場合、whileループを抜ける
@@ -129,12 +133,21 @@ class EchoChamberVisualizer:
             
             x, y = x2, y2
 
-    def draw(self, scroll_x):
+    def draw(self):
         # loop_duration = 10 * (self.max_depth + 1)  # 深さが最大値に達するまでのフレーム数
         current_max_depth = (pyxel.frame_count // 5) % (self.max_depth + 1)
         # current_max_depth = (pyxel.frame_count // 10) % (self.max_depth + 1)
-        self.draw_polygon(self.x_center - scroll_x, self.y_center, self.r, current_max_depth)
+        self.draw_polygon(self.draw_x, self.draw_y, self.r, current_max_depth)
 
-        if self.x_new > 0:
-            ###ランダムな頂点座標から新たなインスタンス座標へラインを1本描画する
-            pyxel.line(self.x_center, self.y_center, self.x_new, self.y_new, pyxel.COLOR_WHITE)
+        # if self.x_new > 0:
+        #     ###ランダムな頂点座標から新たなインスタンス座標へラインを1本描画する
+        #     pyxel.line(self.draw_x, self.draw_y, self.x_new, self.y_new, pyxel.COLOR_WHITE)
+
+        # # loop_duration = 10 * (self.max_depth + 1)  # 深さが最大値に達するまでのフレーム数
+        # current_max_depth = (pyxel.frame_count // 5) % (self.max_depth + 1)
+        # # current_max_depth = (pyxel.frame_count // 10) % (self.max_depth + 1)
+        # self.draw_polygon(self.x_center - scroll_x, self.y_center, self.r, current_max_depth)
+
+        # if self.x_new > 0:
+        #     ###ランダムな頂点座標から新たなインスタンス座標へラインを1本描画する
+        #     pyxel.line(self.x_center, self.y_center, self.x_new, self.y_new, pyxel.COLOR_WHITE)

@@ -50,6 +50,9 @@ class Atari(GameObject):
 
         self.is_visible = is_visible
 
+        self.draw_x = 0
+        self.draw_y = 0
+
     def update(self):
         ###表示順序の基準となる、足元の座標情報を更新する
         self.position_x = self.x + C_ATARI_WIDTH/2
@@ -62,7 +65,7 @@ class Atari(GameObject):
             self.frames03 = Math.floor((pyxel.frame_count + 11)/5) % 12
             self.frames04 = Math.floor((pyxel.frame_count + 2)/5) % 12
             
-            pyxel.blt(self.x,    self.y +4,  2, 160, 0 + self.frames01 * 16, 16, 16, 0)
+            pyxel.blt(self.draw_x,    self.draw_y +4,  2, 160, 0 + self.frames01 * 16, 16, 16, 0)
 
     def is_colliding_with(self, other):
         range_x = self.width
@@ -75,7 +78,7 @@ class Atari(GameObject):
                         return True
         return False
 
-    def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no):
+    def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no, door_open_array):
         ###当該シーン・シナリオ配下でcharacter_noがプレイヤーconversation_withに話しかけられた場合の発話
         #----------------------------------------------------------- 
         ###シーン番号、シナリオ番号、返却テキスト番号（進行に合わせて返却のたびにカウントアップ、ただし質問中はそのまま）、質問中フラグ、返答結果番号
@@ -85,6 +88,8 @@ class Atari(GameObject):
         self.conversation_with = conversation_with ### 誰と会話中か
         #----------------------------------------------------------- 
         self.responce_no = response_no ### 返答結果番号
+        self.door_open_array = door_open_array
+        self.panning_switch = False
 
         ### ◆シーン１　ー　シナリオ１
         if (self.scene_no == C_SCENE_HOME):
@@ -98,9 +103,16 @@ class Atari(GameObject):
                 if ((self.scenario_no == 0) and (self.branch_no == 0)):
                     if self.rtn_txt_no == 0:
                         self.rtn_txt_no += 1
-                        return ["やあ。","","","ここが何処だか、今回は覚えてるかい？","",""]
+                        return ["やあ。","","","ここが何処だか、今回は覚えてる？","",""]
                     if self.rtn_txt_no == 1:
-                        return ["今度は救えるといいね。","",""]
+                        ###月の戸を開放する。
+                        self.door_open_array[1] = True
+                        self.rtn_txt_no += 1
+                        return ["今度は助けられるといいね。","",""]
+                    if self.rtn_txt_no == 2:
+                        ###panningを変更する。
+                        self.panning_switch = True
+                        return ["最初の戸を開いておいたよ。","","頑張ってね。"]
         if (self.scene_no == C_SCENE_WOOD) :
             if self.obj_no == 4: ### 木の幹１
                 return ["やや小振りな枝に葉が茂っている。",""]

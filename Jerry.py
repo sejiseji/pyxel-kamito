@@ -20,6 +20,10 @@ class Jerry(GameObject):
         ###
         self.is_playing = False
 
+        self.draw_x = 0
+        self.draw_y = 0
+        
+
     def update(self):
         ###表示順序の基準となる、足元の座標情報を更新する
         self.position_x = self.x + C_JERRY_WIDTH/2
@@ -30,7 +34,7 @@ class Jerry(GameObject):
         self.frame_count_wk = pyxel.frame_count
         self.animation_frame = self.frame_count_wk // 10 % 4  
         ###
-        pyxel.blt(self.x, self.y, 1, 80, self.animation_frame * C_JERRY_HEIGHT, C_JERRY_WIDTH, C_JERRY_HEIGHT, 0)
+        pyxel.blt(self.draw_x, self.draw_y, 1, 80, self.animation_frame * C_JERRY_HEIGHT, C_JERRY_WIDTH, C_JERRY_HEIGHT, 0)
 
     def is_colliding_with(self, other):
         range_x = self.width
@@ -43,7 +47,7 @@ class Jerry(GameObject):
                         return True
         return False
 
-    def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no):
+    def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no, door_open_array):
         ###当該シーン・シナリオ配下でcharacter_noがプレイヤーconversation_withに話しかけられた場合の発話
         #----------------------------------------------------------- 
         ###シーン番号、シナリオ番号、返却テキスト番号（進行に合わせて返却のたびにカウントアップ、ただし質問中はそのまま）、質問中フラグ、返答結果番号
@@ -53,6 +57,7 @@ class Jerry(GameObject):
         self.conversation_with = conversation_with ### 誰と会話中か
         #----------------------------------------------------------- 
         self.responce_no = response_no ### 返答結果番号
+        self.door_open_array = door_open_array
 
         ### ◆シーン１　ー　シナリオ１
         if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 0)):

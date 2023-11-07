@@ -346,13 +346,18 @@ class Firework:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.peak = y - Random.randrange(70, 140)  # 最大高度（鉛直投射の軌跡）
+        self.draw_x = self.x
+        self.draw_y = self.y
+        self.peak = self.draw_y - Random.randrange(70, 140)  # 最大高度（鉛直投射の軌跡）
         self.vy = Random.randrange(1, 3)  # 上昇速度
         self.active = True
         self.burst = None
         self.life = 100 # 花火の寿命
         self.rotation_angle = 0  # 花火の回転角度　。。。３次元球面花火用
         self.multi_color_num = 1
+
+
+
         # すべての花火関数をリストに追加
         self.burst_funcs = [radial_burst, spiral_burst, triangular_burst, random_burst, heart_shape, star_burst, 
                             spiral_recursive_burst, fibonacci_burst, fibonacci_burst_multiple, ring_burst, ring_burst2, 
@@ -363,56 +368,59 @@ class Firework:
         self.burst_funcs_maxindex = len(self.burst_funcs) - 1
         # self.burst_func = Random.choice(self.burst_funcs)
         # self.burst_func = self.burst_funcs[2]
-        self.burst_func = self.burst_funcs[13] # 13: radiating_sphere_projection_burstまで調整完了済みです. 20230905
-        # self.burst_func = self.burst_funcs[Random.randrange(0,13)]
         # self.burst_func = self.burst_funcs[self.burst_funcs_maxindex]
+        # self.burst_func = self.burst_funcs[13] # 13: radiating_sphere_projection_burstまで調整完了済みです. 20230905
+        self.burst_func = self.burst_funcs[Random.randrange(0,14)]
+
+        # self.update()
 
 
     def update(self):
         if self.life > 0:
             if self.y > self.peak and self.active:
                 self.y -= self.vy  # 上昇
+                self.draw_y = self.y                
             elif self.active:
                 if self.burst_func   == radial_burst: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), 100, 25)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 100, 25)
                 elif self.burst_func == spiral_burst: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), 100, 20, Random.randrange(1, 4))
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 100, 20, Random.randrange(1, 4))
                 elif self.burst_func == triangular_burst: ###調整済 
-                    self.burst = self.burst_func(complex(self.x, self.y), Random.uniform(10, 20), 100, Random.randrange(2, 5))
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.uniform(10, 20), 100, Random.randrange(2, 5))
                 elif self.burst_func == random_burst: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), 60, 100)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 60, 100)
                 elif self.burst_func == heart_shape: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), 2)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 2)
                 elif self.burst_func == star_burst: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), Random.randrange(15, 30))
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.randrange(15, 30))
                 elif self.burst_func == spiral_recursive_burst: ###調整済
                     rotation_offset = Random.uniform(-0.5, 0.5)
                     branch_count = Random.choice([5, 6, 8, 10])
-                    self.burst = self.burst_func(complex(self.x, self.y), 2, 12, 8.0, rotation_offset, branch_count)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 2, 12, 8.0, rotation_offset, branch_count)
                 elif self.burst_func == fibonacci_burst: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), 42, 100)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 42, 100)
                 elif self.burst_func == fibonacci_burst_multiple: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), [0.25, 0.375, 0.5], 100, self.life)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), [0.25, 0.375, 0.5], 100, self.life)
                 elif self.burst_func == ring_burst: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), Random.choice([8, 12, 15]), 100, 5)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.choice([8, 12, 15]), 100, 5)
                 elif self.burst_func == ring_burst2: ###調整済
-                    self.burst = self.burst_func(complex(self.x, self.y), Random.choice([8, 12, 15]), 100, 5)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.choice([8, 12, 15]), 100, 5)
                 elif self.burst_func == multi_ring_burst: ###調整済
                     index = Random.randrange(0, 3)
                     radius = [4, 6, 8]
                     particle_num = [18, 20, 26]
-                    self.burst = self.burst_func(complex(self.x, self.y), radius[index], 4, particle_num[index])
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), radius[index], 4, particle_num[index])
                 elif self.burst_func == halo_burst: 
                     index = Random.randrange(0, 3)
                     radius = [15, 20, 30]
                     particle_num = [40, 60, 80]
-                    self.burst = self.burst_func(complex(self.x, self.y), 2, radius[index], particle_num[index])
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 2, radius[index], particle_num[index])
 
                 elif self.burst_func == radiating_sphere_projection_burst:
                     index = Random.randrange(0, 3)
                     radius = [40, 50, 65]
                     particle_num = [100, 150, 250]
-                    self.burst = self.burst_func(complex(self.x, self.y), radius[index], particle_num[index], 1.2, self.life)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), radius[index], particle_num[index], 1.2, self.life)
 
                 # ... 同様に、他の関数も条件分岐して引数を設定 ...
                 else:
@@ -426,18 +434,18 @@ class Firework:
     def expand_burst(self):
         expansion_factor = 1.0028  # 拡大率を設定
         # 元の中心からの相対的な位置に放射座標を移動
-        relative_burst = [complex(pt.real - self.x, pt.imag - self.y) for pt in self.burst]
+        relative_burst = [complex(pt.real - self.draw_x, pt.imag - self.draw_y) for pt in self.burst]
         # 相対的な位置で放射座標を拡大
         expanded_burst = [complex(pt.real * expansion_factor, pt.imag * expansion_factor) for pt in relative_burst]
         # 拡大した放射座標を元の中心に戻す
-        self.burst = [complex(pt.real + self.x, pt.imag + self.y) for pt in expanded_burst]
+        self.burst = [complex(pt.real + self.draw_x, pt.imag + self.draw_y) for pt in expanded_burst]
 
     def expand_and_rotate_burst(self, angle):
         expansion_factor = 1.0028
         # 拡大
         expanded_burst = [complex(pt.real * expansion_factor, pt.imag * expansion_factor) for pt in self.burst]
         # 拡大した放射座標をFireworkの中心座標を中心に回転させる
-        rotated_burst = [self.rotate_point(pt, complex(self.x, self.y), angle) for pt in expanded_burst]
+        rotated_burst = [self.rotate_point(pt, complex(self.draw_x, self.draw_y), angle) for pt in expanded_burst]
         self.burst = rotated_burst
 
     def rotate_point(self, point, center, angle):

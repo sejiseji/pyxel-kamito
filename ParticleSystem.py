@@ -144,7 +144,7 @@ class DotParticle:
         self.color = Random.choice([pyxel.COLOR_ORANGE, pyxel.COLOR_YELLOW, pyxel.COLOR_RED])
 
     def update(self, scroll_x=0):
-        self.x += self.speed * math.cos(self.angle) - scroll_x
+        self.x += self.speed * math.cos(self.angle)
         self.y -= self.speed * math.sin(self.angle)
         self.age += 1
     def is_alive(self):

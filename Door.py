@@ -35,6 +35,9 @@ class Door(GameObject):
 
         self.belong_scene = scene
 
+        self.draw_x = 0
+        self.draw_y = 0
+
     def update(self):
         ###closing状態で開き幅が0になったら、closingを終了し、closed状態を開始する
         if self.is_closing and (self.open_width == 0):
@@ -57,22 +60,15 @@ class Door(GameObject):
 
     def draw(self):
         ###鳥居部分
-        pyxel.blt(self.x -10, self.y -16, 2, 112, 0, 44, 64, 3)
+        pyxel.blt(self.draw_x -10, self.draw_y -16, 2, 112, 0, 44, 64, 3)
         ###開いた領域部分
         if self.is_opening or self.is_opened or self.is_closing:
-            pyxel.blt(self.x, self.y, 2, 40, 64, self.open_width, 48, 3)
+            pyxel.blt(self.draw_x, self.draw_y, 2, 40, 64, self.open_width, 48, 3)
         ###ドア部分
-        pyxel.blt(self.x + self.open_width, self.y, 2, 56, 64, 24, 48, 3)
+        pyxel.blt(self.draw_x + self.open_width, self.draw_y, 2, 56, 64, 24, 48, 3)
 
         ###重ね表示(暗闇に重ねる光)
         if self.is_opened:
-            # self.frames01 = Math.floor(pyxel.frame_count / 10) % 15
-            # self.frames02 = Math.floor((pyxel.frame_count + 3) / 10) % 15
-            # self.frames03 = Math.floor((pyxel.frame_count +11) / 10) % 15
-            # self.frames04 = Math.floor((pyxel.frame_count + 7) / 10) % 15
-            # self.frames05 = Math.floor((pyxel.frame_count +12) / 10) % 15
-            # self.frames06 = Math.floor((pyxel.frame_count + 9) / 10) % 15
-            # self.frames07 = Math.floor((pyxel.frame_count + 2) / 10) % 15
             base_frame = Math.floor(pyxel.frame_count / 10)
             offsets = [0, 3, 11, 7, 12, 9, 2]
             self.frames01, self.frames02, self.frames03, self.frames04, self.frames05, self.frames06, self.frames07 = [(base_frame + offset) % 15 for offset in offsets]
@@ -93,9 +89,9 @@ class Door(GameObject):
                 pyxel.pal(7, 15)
             if self.room_no == 7: # 7:日輪の部屋
                 pyxel.pal(7, 7)
-            pyxel.blt(self.x + 5,  self.y + 4, 2, 88, self.frames01 * 5, 5, 5, 0)
-            pyxel.blt(self.x + 9,  self.y +22, 2, 88, self.frames04 * 5, 5, 5, 0)
-            pyxel.blt(self.x + 5,  self.y +40, 2, 88, self.frames07 * 5, 5, 5, 0)
+            pyxel.blt(self.draw_x + 5,  self.draw_y + 4, 2, 88, self.frames01 * 5, 5, 5, 0)
+            pyxel.blt(self.draw_x + 9,  self.draw_y +22, 2, 88, self.frames04 * 5, 5, 5, 0)
+            pyxel.blt(self.draw_x + 5,  self.draw_y +40, 2, 88, self.frames07 * 5, 5, 5, 0)
             pyxel.pal()
 
             if self.room_no == 0: # 0:暗闇の戸
@@ -114,11 +110,75 @@ class Door(GameObject):
                 pyxel.pal(7, 4)
             if self.room_no == 7: # 7:日輪の部屋
                 pyxel.pal(7, 15)
-            pyxel.blt(self.x +10,  self.y +10, 2, 88, self.frames02 * 5, 5, 5, 0)
-            pyxel.blt(self.x + 4,  self.y +16, 2, 88, self.frames03 * 5, 5, 5, 0)
-            pyxel.blt(self.x + 6,  self.y +28, 2, 88, self.frames05 * 5, 5, 5, 0)
-            pyxel.blt(self.x +10,  self.y +34, 2, 88, self.frames06 * 5, 5, 5, 0)
+            pyxel.blt(self.draw_x +10,  self.draw_y +10, 2, 88, self.frames02 * 5, 5, 5, 0)
+            pyxel.blt(self.draw_x + 4,  self.draw_y +16, 2, 88, self.frames03 * 5, 5, 5, 0)
+            pyxel.blt(self.draw_x + 6,  self.draw_y +28, 2, 88, self.frames05 * 5, 5, 5, 0)
+            pyxel.blt(self.draw_x +10,  self.draw_y +34, 2, 88, self.frames06 * 5, 5, 5, 0)
             pyxel.pal()
+
+        # ###鳥居部分
+        # pyxel.blt(self.x -10, self.y -16, 2, 112, 0, 44, 64, 3)
+        # ###開いた領域部分
+        # if self.is_opening or self.is_opened or self.is_closing:
+        #     pyxel.blt(self.x, self.y, 2, 40, 64, self.open_width, 48, 3)
+        # ###ドア部分
+        # pyxel.blt(self.x + self.open_width, self.y, 2, 56, 64, 24, 48, 3)
+
+        # ###重ね表示(暗闇に重ねる光)
+        # if self.is_opened:
+        #     # self.frames01 = Math.floor(pyxel.frame_count / 10) % 15
+        #     # self.frames02 = Math.floor((pyxel.frame_count + 3) / 10) % 15
+        #     # self.frames03 = Math.floor((pyxel.frame_count +11) / 10) % 15
+        #     # self.frames04 = Math.floor((pyxel.frame_count + 7) / 10) % 15
+        #     # self.frames05 = Math.floor((pyxel.frame_count +12) / 10) % 15
+        #     # self.frames06 = Math.floor((pyxel.frame_count + 9) / 10) % 15
+        #     # self.frames07 = Math.floor((pyxel.frame_count + 2) / 10) % 15
+        #     base_frame = Math.floor(pyxel.frame_count / 10)
+        #     offsets = [0, 3, 11, 7, 12, 9, 2]
+        #     self.frames01, self.frames02, self.frames03, self.frames04, self.frames05, self.frames06, self.frames07 = [(base_frame + offset) % 15 for offset in offsets]
+
+        #     if self.room_no == 0: # 0:暗闇の戸
+        #         pyxel.pal(7, 0)
+        #     if self.room_no == 1: # 1:宵の戸
+        #         pyxel.pal(7, 7)
+        #     if self.room_no == 2: # 2:灯の戸
+        #         pyxel.pal(7, 8)
+        #     if self.room_no == 3: # 3:波紋の戸
+        #         pyxel.pal(7, 12)
+        #     if self.room_no == 4: # 4:刻時の戸
+        #         pyxel.pal(7, 11)
+        #     if self.room_no == 5: # 5:静寂の戸
+        #         pyxel.pal(7, 10)
+        #     if self.room_no == 6: # 6:記憶の戸
+        #         pyxel.pal(7, 15)
+        #     if self.room_no == 7: # 7:日輪の部屋
+        #         pyxel.pal(7, 7)
+        #     pyxel.blt(self.x + 5,  self.y + 4, 2, 88, self.frames01 * 5, 5, 5, 0)
+        #     pyxel.blt(self.x + 9,  self.y +22, 2, 88, self.frames04 * 5, 5, 5, 0)
+        #     pyxel.blt(self.x + 5,  self.y +40, 2, 88, self.frames07 * 5, 5, 5, 0)
+        #     pyxel.pal()
+
+        #     if self.room_no == 0: # 0:暗闇の戸
+        #         pyxel.pal(7, 0)
+        #     if self.room_no == 1: # 1:宵の戸
+        #         pyxel.pal(7, 13)
+        #     if self.room_no == 2: # 2:灯の戸
+        #         pyxel.pal(7, 2)
+        #     if self.room_no == 3: # 3:波紋の戸
+        #         pyxel.pal(7, 5)
+        #     if self.room_no == 4: # 4:刻時の戸
+        #         pyxel.pal(7, 3)
+        #     if self.room_no == 5: # 5:静寂の戸
+        #         pyxel.pal(7, 9)
+        #     if self.room_no == 6: # 6:記憶の戸
+        #         pyxel.pal(7, 4)
+        #     if self.room_no == 7: # 7:日輪の部屋
+        #         pyxel.pal(7, 15)
+        #     pyxel.blt(self.x +10,  self.y +10, 2, 88, self.frames02 * 5, 5, 5, 0)
+        #     pyxel.blt(self.x + 4,  self.y +16, 2, 88, self.frames03 * 5, 5, 5, 0)
+        #     pyxel.blt(self.x + 6,  self.y +28, 2, 88, self.frames05 * 5, 5, 5, 0)
+        #     pyxel.blt(self.x +10,  self.y +34, 2, 88, self.frames06 * 5, 5, 5, 0)
+        #     pyxel.pal()
 
 
     def openStart(self):
@@ -144,7 +204,7 @@ class Door(GameObject):
         return False
 
     # def getReactionText(self):
-    def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no):
+    def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no, door_open_array):
         ###当該シーン・シナリオ配下でcharacter_noがプレイヤーconversation_withに話しかけられた場合の発話
         #----------------------------------------------------------- 
         ###シーン番号、シナリオ番号、返却テキスト番号（進行に合わせて返却のたびにカウントアップ、ただし質問中はそのまま）、質問中フラグ、返答結果番号
@@ -154,6 +214,7 @@ class Door(GameObject):
         self.conversation_with = conversation_with ### 誰と会話中か
         #----------------------------------------------------------- 
         self.responce_no = response_no ### 返答結果番号
+        self.door_open_array = door_open_array
 
         if(self.room_no == 0):
             if(self.belong_scene == 0) :

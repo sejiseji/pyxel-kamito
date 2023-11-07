@@ -30,6 +30,9 @@ class Blade:
         self.dy = 0
         self.cached_tips = []  # ここに7回分の頂点を格納
         self.update_count = 0  # 何回頂点が更新されたかをトラック
+        
+        self.draw_x = 0
+        self.draw_y = 0
 
 
     def generate_control_points(self):
@@ -89,6 +92,11 @@ class Blade:
 class Grass:
     def __init__(self, x, y, distance, min_height, max_height, num_blades):
         self.blades = [Blade(x + random.uniform(0, distance), y, random.uniform(min_height, max_height)) for _ in range(num_blades)]
+        self.x = x
+        self.y = y
+        self.draw_x = 0
+        self.draw_y = 0
+
 
     def update(self, min_x=0, max_x=300):
         for blade in self.blades:

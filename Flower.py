@@ -9,14 +9,17 @@ class Flower:
         self.y = y
         self.stem = stem
         self.core_radius = random.randint(2, 4)
-        self.core_color = random.choice([pyxel.COLOR_RED, pyxel.COLOR_YELLOW, pyxel.COLOR_PINK])
+        self.core_color = random.choice([pyxel.COLOR_RED, pyxel.COLOR_YELLOW, pyxel.COLOR_PINK, pyxel.COLOR_WHITE, pyxel.COLOR_ORANGE, pyxel.COLOR_PEACH])
         self.num_petals = random.randint(4, 8)
         self.petal_length = random.randint(5, 10)
         self.petal_width = random.randint(3, 5)
-        self.petal_color = random.choice([pyxel.COLOR_RED, pyxel.COLOR_YELLOW, pyxel.COLOR_PINK, pyxel.COLOR_ORANGE])
-        self.petal_coordinates_outer = [[] for _ in range(5)]  # For memoizing outer coordinates of petals
-        self.petal_coordinates_inner = [[] for _ in range(5)]  # For memoizing inner coordinates of petals
+        self.petal_color = random.choice([pyxel.COLOR_RED, pyxel.COLOR_YELLOW, pyxel.COLOR_PINK, pyxel.COLOR_WHITE, pyxel.COLOR_ORANGE, pyxel.COLOR_PEACH])
+        self.petal_coordinates_outer = [[] for _ in range(6)]  # For memoizing outer coordinates of petals
+        self.petal_coordinates_inner = [[] for _ in range(6)]  # For memoizing inner coordinates of petals
         self.memoize_petal_coordinates()
+
+        self.draw_x = 0
+        self.draw_y = 0
 
     def memoize_petal_coordinates(self):
         for count in range(5):
@@ -70,6 +73,7 @@ class Flower:
 class Stem:
     def __init__(self, x, base_y, height):
         self.x = x
+        self.y = base_y
         self.base_y = base_y
         self.height = height
         self.max_width = random.randint(2, 5)  # 草の最大幅
@@ -97,6 +101,8 @@ class Stem:
         self.tip_cache = []  # tipの座標をキャッシュするためのリスト
         self.tip_cache_index = 0  # 使用中のキャッシュのインデックス
 
+        self.draw_x = 0
+        self.draw_y = 0
 
     def generate_control_points(self):
         self.mid_x = random.uniform(self.x - 10, self.x + 10)
