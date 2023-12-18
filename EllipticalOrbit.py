@@ -16,6 +16,7 @@ class EllipticalOrbit:
         self.parent = parent  # 追加：親となるオブジェクトを参照
         self.x, self.y, self.z = 0, 0, 0
         self.draw_x, self.draw_y = 0, 0
+        self.pjtx, self.pjty = 0, 0
         self.update()  # Initialize the position
 
     def update(self):
@@ -57,10 +58,13 @@ class EllipticalOrbit:
         Y = f * self.y / (self.z + f) + pyxel.height // 2
         return X, Y
 
-    def draw(self, scroll_x):
+    def draw(self, scroll_x, framecount):
         X, Y = self.project(200)
-        pyxel.pset(X -scroll_x, Y, self.color)
-        pyxel.circb(X -scroll_x, Y, 3, self.color)
+        # pyxel.pset(X -scroll_x, Y, self.color)
+        # pyxel.circb(X -scroll_x, Y, 3, self.color)
+        self.pjtx, self.pjty = X, Y
+        frames = framecount // 7 % 8
+        pyxel.blt(X -scroll_x, Y, 1, 32, frames * 16, 16, 16, 0)
 
 ###呼び出し状況
     # def generateObjects(self):

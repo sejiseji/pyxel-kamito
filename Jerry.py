@@ -13,9 +13,11 @@ class Jerry(GameObject):
         super().__init__(x,y)
         self.width = C_JERRY_WIDTH
         self.height = C_JERRY_HEIGHT
+        self.collision_width = C_JERRY_WIDTH
+        self.collision_height = C_JERRY_HEIGHT
         ###表示順序の基準になる、JERRY足元の座標
-        self.position_x = self.x + C_JERRY_WIDTH/2
-        self.position_y = self.y + C_JERRY_HEIGHT
+        self.position_x = self.x + self.width/2
+        self.position_y = self.y + self.height
 
         ###
         self.is_playing = False
@@ -36,15 +38,29 @@ class Jerry(GameObject):
         ###
         pyxel.blt(self.draw_x, self.draw_y, 1, 80, self.animation_frame * C_JERRY_HEIGHT, C_JERRY_WIDTH, C_JERRY_HEIGHT, 0)
 
-    def is_colliding_with(self, other):
-        range_x = self.width
-        range_y = C_JERRY_WIDTH
+    # def is_colliding_with(self, other):
+    #     range_x = self.width
+    #     range_y = C_JERRY_WIDTH
 
-        if self.x + range_x > other.x:
-            if self.x < other.x + range_x:
-                if self.y + range_y > other.y:
-                    if self.y < other.y + range_y:
-                        return True
+    #     if self.x + range_x > other.x:
+    #         if self.x < other.x + range_x:
+    #             if self.y + range_y > other.y:
+    #                 if self.y < other.y + range_y:
+    #                     return True
+    #     return False
+
+    def is_colliding_with(self, other):
+        range_x_self = 16
+        range_y_self = 8
+        range_x_other = 16
+        range_y_other = 8
+
+        if self.position_x + range_x_self > other.position_x and \
+        self.position_x < other.position_x + range_x_other:
+            if self.position_y + range_y_self > other.position_y and \
+            self.position_y < other.position_y + range_y_other:
+                return True
+
         return False
 
     def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no, door_open_array):

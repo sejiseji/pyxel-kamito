@@ -34,7 +34,7 @@ class ParticleSystem:
         self.spawn_args = (x, y, width, height, num_particles, pattern, size, color, speed_range, direction)
         self.spawn_rotate_args = (x, y, num_particles, pattern, size, color, speed_range)
 
-    def update_particles(self,scroll_x=0):
+    def update_particles(self,scroll_x=0,spawn_ptn=0):
         if self.is_active:
             ###現在のself.x,self.yでargsを更新
             self.spawn_args = (self.x, self.y, self.spawn_args[2], self.spawn_args[3], self.spawn_args[4], self.spawn_args[5], self.spawn_args[6], self.spawn_args[7], self.spawn_args[8], self.spawn_args[9])
@@ -44,8 +44,10 @@ class ParticleSystem:
             self.spawn_timer += 1
             if self.spawn_timer % self.spawn_interval == 0:
                 self.spawn_timer = 0
-                # self.spawn_particles_in_rectangle(*self.spawn_args)
-                self.spawn_rotating_particles(*self.spawn_rotate_args)
+                if spawn_ptn == 0:
+                    self.spawn_rotating_particles(*self.spawn_rotate_args)
+                elif spawn_ptn == 1:
+                    self.spawn_particles_in_rectangle(*self.spawn_args)
                 self.current_spawns += 1
                 if self.current_spawns >= self.total_spawns:
                     self.is_active = False
@@ -164,7 +166,7 @@ class CircleParticle:
         self.color = color
         self.size = size
     def update(self, scroll_x=0):
-        self.x += self.speed * math.cos(self.angle) - scroll_x
+        self.x += self.speed * math.cos(self.angle)
         self.y -= self.speed * math.sin(self.angle)
         self.age += 1
     def is_alive(self):

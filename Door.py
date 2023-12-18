@@ -16,6 +16,11 @@ class Door(GameObject):
         super().__init__(x,y)
         self.width = C_DOOR_WIDTH
         self.height = C_DOOR_HEIGHT
+        ###表示順序の基準になる、Door足元の座標
+        self.position_x = self.x + C_DOOR_WIDTH/2 + 4
+        self.position_y = self.y + C_DOOR_HEIGHT
+        self.collision_width = C_DOOR_WIDTH
+        self.collision_height = C_DOOR_HEIGHT
         ###開き状態はデフォルトではない
         self.is_opened = False
         self.is_opening = False
@@ -24,9 +29,6 @@ class Door(GameObject):
         self.is_closing = False
         ###開き幅
         self.open_width = 0 ##デフォルトでは閉じている
-        ###表示順序の基準になる、Door足元の座標
-        self.position_x = self.x + C_DOOR_WIDTH/2 + 4
-        self.position_y = self.y + C_DOOR_HEIGHT
 
         self.flg_reaction = False
         self.is_playing = False
@@ -191,16 +193,30 @@ class Door(GameObject):
         self.is_opened = False
         self.is_closing = True
 
-    def is_colliding_with(self, other):
-        range_x = self.width
-        # range_y = C_DOOR_WIDTH + self.open_width
-        range_y = C_PX_AROUND_ATARI
+    # def is_colliding_with(self, other):
+    #     range_x = self.width
+    #     # range_y = C_DOOR_WIDTH + self.open_width
+    #     range_y = C_PX_AROUND_ATARI
 
-        if self.position_x + range_x > other.position_x:
-            if self.position_x < other.position_x + range_x:
-                if self.position_y + range_y > other.position_y:
-                    if self.position_y < other.position_y + range_y:
-                        return True
+    #     if self.position_x + range_x > other.position_x:
+    #         if self.position_x < other.position_x + range_x:
+    #             if self.position_y + range_y > other.position_y:
+    #                 if self.position_y < other.position_y + range_y:
+    #                     return True
+    #     return False
+
+    def is_colliding_with(self, other):
+        range_x_self = 16
+        range_y_self = 8        
+        range_x_other = 16
+        range_y_other = 8
+
+        if self.position_x + range_x_self > other.position_x and \
+        self.position_x < other.position_x + range_x_other:
+            if self.position_y + range_y_self > other.position_y and \
+            self.position_y < other.position_y + range_y_other:
+                return True
+
         return False
 
     # def getReactionText(self):

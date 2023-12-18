@@ -261,14 +261,18 @@ class MyApp:
                 self.updateMoonScene()
             elif (self.gamestate.scene == C_SCENE_FIRE):
                 self.updateFireScene()
-            elif (self.gamestate.scene == C_SCENE_WATER):
-                self.updateWaterScene()
+            # elif (self.gamestate.scene == C_SCENE_WATER):
+            #     self.updateWaterScene()
             elif (self.gamestate.scene == C_SCENE_WOOD):
                 if not(self.player.able_moving_top == 100):
                     self.player.able_moving_top = 100
                 self.updateWoodScene()
             elif (self.gamestate.scene == C_SCENE_GOLD):
                 self.updateGoldScene()
+            # elif (self.gamestate.scene == C_SCENE_SOIL):
+            #     self.updateSoilScene()
+            elif (self.gamestate.scene == C_SCENE_SUN):
+                self.updateSunScene()
         ###MENUモード共通 ================================
         if (self.gamestate.mode == C_MENU):
             # self.invsys.update()                    
@@ -358,6 +362,12 @@ class MyApp:
             ###テキスト表示用変数
             self.hint_text = ""
             self.hint_text_divided = list()
+            self.framecount_for_text_disp_first = 0
+            self.framecount_for_text_disp = 0
+            self.framecount_for_text_disp1 = 0
+            self.framecount_for_text_disp2 = 0
+            self.framecount_for_text_disp3 = 0
+
 
         ### 冒頭
         if(self.gamestate.scene == C_SCENE_HOME):
@@ -371,6 +381,19 @@ class MyApp:
             ###SCENE:FIRE用
             self.points3d = list()
             self.lantans = list()
+            ###SCENE:WATER用
+            self.fishdx01 = 100
+            self.fishdy01 = 100
+            self.fishdx02 = 220
+            self.fishdy02 = 150
+            self.fishdx03 = 340
+            self.fishdy03 = 80
+            self.fishdx04 = 410
+            self.fishdy04 = 130
+            self.fishdx05 = 550
+            self.fishdy05 = 230
+            self.frogx = 160
+            self.frogy = 180
             ###SCENE:WOOD用
             self.trees = list()
             self.grasses = list()
@@ -378,6 +401,15 @@ class MyApp:
             ###SCENE:GOLD用
             self.elliptical_orbits = list()
             self.segments = list()
+            self.sandfall_num = 8 #砂の滝の数
+            self.sandfall_points = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            self.sandx = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            self.sandy = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            self.width = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            self.times = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            self.sand_frame = [0, 0, 0, 0] #4frame周期
+            self.girlsidx01 = 0
+            self.girlsidx02 = 0
             ###テスト用(パーティクルシステム)
             self.timer_for_psys = 0
             ###SCENE:WATER用
@@ -434,6 +466,12 @@ class MyApp:
                     ###象徴するオブジェクトを生成
                     if (self.gamestate.scene == C_SCENE_GOLD):
                         self.generateUniqueObjectsInGold()
+                    ###土オブジェクトを生成
+                    if (self.gamestate.scene == C_SCENE_SOIL):
+                        self.generateUniqueObjectsInSoil()
+                    ###太陽オブジェクトを生成
+                    if (self.gamestate.scene == C_SCENE_SUN):
+                        self.generateUniqueObjectsInSun()
 
     def generateUniqueObjectsInHome(self):
         #プレイヤーオブジェクトを生成
@@ -462,6 +500,9 @@ class MyApp:
         ###月オブジェクトを生成
         self.moon01 = Moon(150, 70, 50, 0.001)
         self.moons.append(self.moon01)
+        ###キャラクターオブジェクトを生成
+        self.charactor01 = Character(2,210,160,2,False) #Michi
+        characters.append(self.charactor01) ###キャラクター・オブジェクトリストに追加
     
     def generateUniqueObjectsInFire(self):
         ###蛍オブジェクトを生成
@@ -565,10 +606,52 @@ class MyApp:
         point_c = EllipticalOrbit(point_b.x, point_b.y, 20, 20, 0, 0.05, pyxel.COLOR_GREEN, parent=point_b)
         self.elliptical_orbits.append(point_c)
         self.elliptical_orbits.append(point_b)
+        ###背景用当たり判定インスタンス群
+        # self.atari009 = Atari(self.elliptical_orbits[0].pjtx, self.elliptical_orbits[0].pjty, 7, C_SCENE_GOLD, C_VISIBLE) ## girls 
+        self.atari009 = Atari(140, 145, 7, C_SCENE_GOLD, C_VISIBLE) ## girls
+        self.atari009.collision_width = 8
+        self.atari009.collision_height = 8
+        ###背景用当たり判定リストに追加
+        ataris.append(self.atari009)
        
-    # def generateUniqueObjectsInSoil(self):
+    def generateUniqueObjectsInSoil(self):
+        ###キャラクターオブジェクトを生成
+        self.charactor01 = Character(7,210,160,2,False) #LIKI
+        characters.append(self.charactor01) ###キャラクター・オブジェクトリストに追加
 
-    # def generateUniqueObjectsInSun(self):
+    def generateUniqueObjectsInSun(self):
+        ###パーティクルシステムを生成
+        for _ in range(0,2):
+            self.psys_instances.append(ParticleSystem())
+        ###パーティクルシステムを初期化
+        self.psys_instances[0].activate(
+            active_duration=999999999, spawn_interval=5, total_spawns=999999999,
+            x=90, y=-40, #particle放射の中心座標
+            width=500, height=300, ##正方エリア内放射パターンで使用されるエリアサイズ指定変数
+            num_particles=10, ##一度に放射するパーティクルの数
+            pattern=1, ##放射particle形状の指定(0:Dot型)
+            size=1, ##Dot型以外で使用されるパーティクルサイズ
+            color=7, #particleの色
+            speed_range=1,
+            direction=7
+        )
+        self.psys_instances[1].activate(
+            active_duration=999999999, spawn_interval=5, total_spawns=999999999,
+            x=300, y=-40, #particle放射の中心座標
+            width=500, height=300, ##正方エリア内放射パターンで使用されるエリアサイズ指定変数
+            num_particles=10, ##一度に放射するパーティクルの数
+            pattern=1, ##放射particle形状の指定(0:Dot型)
+            size=1, ##Dot型以外で使用されるパーティクルサイズ
+            color=7, #particleの色
+            speed_range=1,
+            direction=7
+        )
+        ###背景用当たり判定インスタンス群
+        self.atari007 = Atari(320, 130, 6, C_SCENE_SUN, C_INVISIBLE) ## ストーブ＆ヤカン 
+        self.atari008 = Atari(320, 135, 6, C_SCENE_SUN, C_INVISIBLE) ## 当たり判定の拡張のためのダミー
+        ###背景用当たり判定リストに追加
+        ataris.append(self.atari007)
+        ataris.append(self.atari008)
 
     def deleteObjectsDependingOnScene(self):
         ###PLAYモードにおけるシーン別オブジェクト削除
@@ -592,7 +675,8 @@ class MyApp:
             if (self.gamestate.scene == C_SCENE_GOLD):
                 self.elliptical_orbits.clear()
                 self.segments.clear()
-            
+            if (self.gamestate.scene == C_SCENE_SUN):
+                self.psys_instances.clear()  
 
     def generateDoor(self):
         if (self.gamestate.mode == C_PLAY):
@@ -663,6 +747,7 @@ class MyApp:
         ###moonの更新
         for moon in self.moons:
             moon.update()
+        
 
     def updateFireScene(self):
         ###ランタンの数をチェック
@@ -714,7 +799,7 @@ class MyApp:
     def updateWaterScene(self):
         ###WaterSurfaceEffectインスタンスのupdate
         self.wse.update()
-    
+
     def updateWoodScene(self):
         ###木オブジェクトのplayerに対しての前後状態をupdate
         for tree in self.trees:
@@ -758,6 +843,13 @@ class MyApp:
         if len(self.segments) > 0:
             for segment in self.segments:
                 segment.update()
+
+    def updateSunScene(self):
+        ###パーティクルシステムのupdate
+        ##self.psys_instancesが空でなければ、updateを実行する
+        if len(self.psys_instances) > 0:
+            for psys in self.psys_instances:
+                psys.update_particles(self.camera.x, 1)
 
     def updateParticleSystems(self):
         #####テスト（パーティクルシステム）
@@ -957,11 +1049,11 @@ class MyApp:
             elif(self.gamestate.scene == C_SCENE_GOLD): ###金の戸の場合多角形と樹形図の幾何学図形及び星の描写を行う
                 self.drawGoldBG()
             elif(self.gamestate.scene == C_SCENE_SOIL): ###土の戸の場合、墓地の描写を行う
-                self.drawMoonBG()
-                # self.drawSoilBG()
+                # self.drawMoonBG()
+                self.drawSoilBG()
             elif(self.gamestate.scene == C_SCENE_SUN): ###太陽の戸の場合、ひだまりの描写を行う
-                self.drawMoonBG()
-                # self.drawSunBG()
+                # self.drawMoonBG()
+                self.drawSunBG()
 
     def drawHomeBG(self):
         ###背景を塗りつぶし
@@ -1023,7 +1115,7 @@ class MyApp:
         pyxel.cls(0) #DARK BLUE
         ###月の描画
         for moon in self.moons:
-            moon.draw(self.camera.x)
+            moon.draw(self.camera.x, self.scroll_speeds)
 
         ###花火の描画
         if(len(self.fireworks)>0) :
@@ -1100,8 +1192,9 @@ class MyApp:
         ###reset(Bk)
         pyxel.cls(0)
         # pyxel.cls(1)
-        ###水面の光反射エフェクトを描画（スクロール値適用）
-        self.wse.draw(self.camera.x)
+        # ###水面の光反射エフェクトを描画（スクロール値適用）
+        # self.wse.draw(self.camera.x)
+        self.drawfish(0)
         ###波紋を指定区画内にランダムに描画
         for i in range(0, 19):
             # カウンタが0になったらリセット
@@ -1218,11 +1311,85 @@ class MyApp:
                     self.footprints_draw_y[i] = self.footprints_y[i] - self.fp_radius_h[i]/2 
                     # 波紋を描画
                     pyxel.ellib(self.footprints_draw_x[i] -self.camera.x, self.footprints_draw_y[i], self.fp_radius_w[i], self.fp_radius_h[i], self.footprints_color[i])
+        self.drawfrog(-1)
 
     def drawWaterFT(self):
         ###watertreesの描画
         for watertree in self.water_trees:
             watertree.draw(self.camera.x)
+        ###fishの移動
+        self.drawfish(1)
+
+    def drawfrog(self,direction=1):
+        ###カエル
+        frogframe = (pyxel.frame_count//18)%4
+        if direction == 1:
+            if frogframe == 1:
+                self.frogx -= 0.25
+                self.frogy -= 0.05
+            elif frogframe == 2:
+                self.frogx -= 0.25
+                self.frogy += 0.05
+            if self.frogx < -8:
+                self.frogx = 600
+                self.frogy = Random.randint(150, 230)
+        if direction == -1:
+            if frogframe == 1:
+                self.frogx += 0.25
+                self.frogy -= 0.05
+            elif frogframe == 2:
+                self.frogx += 0.25
+                self.frogy += 0.05
+            if self.frogx > 600:
+                self.frogx = -8
+                self.frogy = Random.randint(150, 230)
+        ###frogの描画
+        if frogframe in(0,1):
+            # if frogframe == 0:
+            #     ##楕円の描画
+            #     pyxel.ellib(self.frogx -4 -self.camera.x, self.frogy +6, 10, 4, 1)
+            pyxel.blt(self.frogx -self.camera.x,self.frogy,1,64,128 + 8*frogframe,direction*8,8,0)
+        elif frogframe in(2,3):
+            if frogframe == 3:
+                ##楕円の描画
+                pyxel.ellib(self.frogx -4 -self.camera.x, self.frogy +6, 17, 4, 1)
+            pyxel.blt(self.frogx -self.camera.x,self.frogy,1,72,128 + 8*(frogframe-2),direction*8,8,0)
+
+    def drawfish(self, layer):
+        ### 魚の描画
+        if layer == 0:
+            ###fishの描画
+            self.fishdx03 -= 0.39
+            if self.fishdx03 < -32:
+                self.fishdx03 += 600
+                self.fishdy03 = Random.randint(0, 230)
+            self.fishdx04 -= 0.46
+            if self.fishdx04 < -32:
+                self.fishdx04 += 600
+                self.fishdy04 = Random.randint(0, 230)
+            self.fishdx05 -= 0.53
+            if self.fishdx05 < -32:
+                self.fishdx05 += 600
+                self.fishdy05 = Random.randint(0, 230)
+            fishframe1 = (pyxel.frame_count//15)%4
+            fishframe2 = (pyxel.frame_count//18 +1)%4
+            fishframe3 = (pyxel.frame_count//12 +2)%4
+            pyxel.blt(self.fishdx03 -self.camera.x,self.fishdy03,1,64,160 + 16*fishframe1,32,16,3)
+            pyxel.blt(self.fishdx04 -self.camera.x,self.fishdy04,1,64,160 + 16*fishframe2,32,16,3)
+            pyxel.blt(self.fishdx05 -self.camera.x,self.fishdy05,1,64,160 + 16*fishframe3,32,16,3)
+        elif layer == 1:
+            self.fishdx01 -= 0.34
+            if self.fishdx01 < -32:
+                self.fishdx01 += 600
+                self.fishdy01 = Random.randint(0, 230)
+            self.fishdx02 -= 0.52
+            if self.fishdx02 < -32:
+                self.fishdx02 += 600
+                self.fishdy02 = Random.randint(0, 230)
+            fishframe4 = (pyxel.frame_count//12)%4
+            fishframe5 = (pyxel.frame_count//15 +3)%4
+            pyxel.blt(self.fishdx01 -self.camera.x,self.fishdy01,1,64,160 + 16*fishframe4,32,16,3)
+            pyxel.blt(self.fishdx02 -self.camera.x,self.fishdy02,1,64,160 + 16*fishframe5,32,16,3)
 
     def drawWoodBG(self):
         pyxel.cls(0) #1,5,12で基本背景色を設定
@@ -1304,19 +1471,241 @@ class MyApp:
     def drawGoldBG(self):
         ###reset(Bk)
         pyxel.cls(0)
+        ###
+        scroll_ratio1 = 1.02
+        scroll_ratio2 = 1.08
+        scroll_ratio3 = 1.02
+        scroll_ratio6 = 1.10
+        ###最背景の青い影
+        pyxel.bltm(8* 0 -self.camera.x*scroll_ratio6,    5,0,   0,8*64,8*16,8* 4,0) 
+        pyxel.bltm(8*16 -self.camera.x*scroll_ratio6,    5,0,   0,8*64,8*16,8* 4,0) 
+        pyxel.bltm(8*32 -self.camera.x*scroll_ratio6,    5,0,   0,8*64,8*16,8* 4,0) 
+        pyxel.bltm(8*48 -self.camera.x*scroll_ratio6,    5,0,   0,8*64,8*16,8* 4,0)
+        pyxel.bltm(8*64 -self.camera.x*scroll_ratio6,    5,0,   0,8*64,8*16,8* 4,0)
+        pyxel.bltm(8*80 -self.camera.x*scroll_ratio6,    5,0,   0,8*64,8*16,8* 4,0)
+        ###最背景の砂山
+        pyxel.bltm(490 -self.camera.x*scroll_ratio2,     5,0,8* 0,8*33,8*22,8* 6,0) #明茶
+        ###砂山の裾で広がる砂
+        pyxel.bltm(110 -self.camera.x*scroll_ratio1, 50,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(150 -self.camera.x*scroll_ratio1, 60,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(170 -self.camera.x*scroll_ratio1,120,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(235 -self.camera.x*scroll_ratio1,100,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(190 -self.camera.x*scroll_ratio1, 80,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(500 -self.camera.x*scroll_ratio1, 55,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm( 60 -self.camera.x*scroll_ratio1, 70,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm( 90 -self.camera.x*scroll_ratio1, 95,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(440 -self.camera.x*scroll_ratio1, 75,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(-25 -self.camera.x*scroll_ratio1, 75,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(290 -self.camera.x*scroll_ratio1, 95,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(375 -self.camera.x*scroll_ratio1, 75,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(482 -self.camera.x*scroll_ratio1, 45,0,   0,8*56,8*25,8* 5,0) 
+        pyxel.bltm(375 -self.camera.x*scroll_ratio1,100,0,   0,8*56,8*25,8* 5,0) 
+        ###砂山
+        pyxel.bltm(400 -self.camera.x*scroll_ratio2,-15,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm(130 -self.camera.x*scroll_ratio2,-10,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm( 60 -self.camera.x*scroll_ratio2, -4,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm(210 -self.camera.x*scroll_ratio2, -4,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm(-50 -self.camera.x*scroll_ratio2,  5,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm(510 -self.camera.x*scroll_ratio2, 10,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm(260 -self.camera.x*scroll_ratio2, 15,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm(370 -self.camera.x*scroll_ratio2, 20,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm(310 -self.camera.x*scroll_ratio2, 20,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        pyxel.bltm( 10 -self.camera.x*scroll_ratio2, 20,0,8* 0,8*48,8*23,8* 8,0) #暗茶
+        ##砂山
+        pyxel.bltm(140 -self.camera.x*scroll_ratio3, 10,0,8* 0,8*33,8*22,8*11,0) #明茶
+        pyxel.bltm(-30 -self.camera.x*scroll_ratio3, 15,0,8* 0,8*33,8*22,8* 8,0) #明茶
+        pyxel.bltm(230 -self.camera.x*scroll_ratio3, 20,0,8* 0,8*33,8*22,8* 7,0) #明茶
+        pyxel.bltm(530 -self.camera.x*scroll_ratio3, 20,0,8* 0,8*33,8*22,8*11,0) #明茶
+        pyxel.bltm(290 -self.camera.x*scroll_ratio3, 30,0,8* 0,8*33,8*22,8*10,0) #明茶
+        pyxel.bltm(420 -self.camera.x*scroll_ratio3, 30,0,8* 0,8*33,8*22,8* 8,0) #明茶
+        ###岩
+        pyxel.blt(  34 -self.camera.x*scroll_ratio3,105,1,160,0,16*2,16*2,0)
+        pyxel.blt( 115 -self.camera.x*scroll_ratio3, 75,1,160,0,16*2,16*2,0)
+        pyxel.blt( 235 -self.camera.x*scroll_ratio3, 87,1,160,0,16*2,16*2,0)
+        pyxel.blt( 235 -self.camera.x*scroll_ratio3, 87,1,160,0,16*2,16*2,0)
+        pyxel.blt( 417 -self.camera.x*scroll_ratio3, 90,1,160,0,16*2,16*2,0)
+        pyxel.blt( 505 -self.camera.x*scroll_ratio3, 85,1,160,0,16*2,16*2,0)
+        pyxel.blt( 565 -self.camera.x*scroll_ratio3,105,1,160,0,16*2,16*2,0)
+        ### 落ちる砂の描画
+        self.sand_frame[0] = (pyxel.frame_count) // 3 % 4
+        self.sand_frame[1] = (pyxel.frame_count + 1) // 3 % 4
+        self.sand_frame[2] = (pyxel.frame_count + 2) // 3 % 4
+        self.sand_frame[3] = (pyxel.frame_count + 3) // 3 % 4
+        if self.sandfall_points[0] == 0:
+            ###初期化
+            self.sandx = [ 72, 177, 262, 402,  0, 560, 250, 382, 32] #x座標
+            self.width = [  5,   9,   7,   3,  6,   5,   4,   2,  2] #横幅
+            self.sandy = [-11,  -7, -12, -11,  0,  -8,  -8,  -8, -8] #y座標
+            self.times = [  5,   6,   8,   8, 11,  12,  11,  11, 11] #描画周期(縦の長さ)
+            self.sandfall_points[0] = self.sandy[0] + 16 * self.times[0]
+            self.sandfall_points[1] = self.sandy[1] + 16 * self.times[1]
+            self.sandfall_points[2] = self.sandy[2] + 16 * self.times[2]
+            self.sandfall_points[3] = self.sandy[3] + 16 * self.times[3]
+            self.sandfall_points[4] = self.sandy[4] + 16 * self.times[4]
+            self.sandfall_points[5] = self.sandy[5] + 16 * self.times[5]
+            self.sandfall_points[6] = self.sandy[6] + 16 * self.times[6]
+            self.sandfall_points[7] = self.sandy[7] + 16 * self.times[7]
+            self.sandfall_points[8] = self.sandy[8] + 16 * self.times[8]
+        #sandfall地点とplayerの位置比較で背景用を描画
+        scroll_ratio4 = 1.01
+        ###砂の滝でできた砂山
+        pyxel.bltm( 30 -self.camera.x*scroll_ratio4, 60,0,   0,8*24,8*11,8*4,0) ##00
+        pyxel.bltm(130 -self.camera.x*scroll_ratio4, 80,0,   0,8*28,8*12,8*4,0) ##01
+        pyxel.bltm(230 -self.camera.x*scroll_ratio4, 95,0,8*11,8*24,8*9, 8*4,0) ##02
+        pyxel.bltm(370 -self.camera.x*scroll_ratio4,110,0,8*12,8*28,8*10,8*4,0) ##03
+        for i in range(0, 4):
+            if self.player.position_y > self.sandfall_points[i]:
+                self.drawSandFlow(self.sandx[i] -self.camera.x*scroll_ratio4, self.sandy[i],self. width[i], self.times[i], self.sand_frame[i%4],i) #x,y、幅、長さセット、描画周期のスタート位置
         ###EllipticalOrbitを描画
         for point in self.elliptical_orbits:
-            point.draw(self.camera.x)
+            # if point.pjty <= self.player.position_y:
+            point.draw(self.camera.x, pyxel.frame_count)
         ###echoを描画
         for segment in self.segments:
             segment.draw()
 
+    # def drawGoldFT(self):
+    #     ###EllipticalOrbitを描画
+    #     for point in self.elliptical_orbits:
+    #         if point.pjty > self.player.position_y:
+    #             point.draw(self.camera.x, pyxel.frame_count)
 
+    def drawSandFlow(self,x,y,width,times,sand_i,sandindex):
+        ###砂の滝
+        for j in range(times):
+            for k in range(width):
+                pyxel.blt(x + k*2,y + 16 * j,2,72 + sand_i * 2,232,2,16,0)
 
-    # def drawSoilBG(self):
+    def drawSoilBG(self):
+        pyxel.cls(4)
 
-    # def drawSunBG(self):
+        ###キャラクターの描画
+        # pyxel.blt(100 - self.camera.x,100,1,16,48,16,48,3)
 
+    def drawSunBG(self):
+        ##pyxel.cls(15)
+        ###芝
+        pyxel.bltm(0 -self.camera.x,0,0,0,72*8,600,300)
+        ###キャラクターの描画
+        pyxel.blt(100 - self.camera.x,100,1,0,96,24,16,3)
+        ###尻尾
+        if pyxel.frame_count // 3 % 2 == 0:
+            pyxel.blt(100 + 24 - self.camera.x,100,1,24,96,    8,8,3)
+        elif pyxel.frame_count // 3 % 2 == 1:
+            pyxel.blt(100 + 24 - self.camera.x,100,1,24,96 + 8,8,8,3)
+        ###particleの描画
+        if len(self.psys_instances) > 0:
+            self.drawParticles()
+        ###天井からのheight
+        ceil_height = 20
+        window_height = 8*15
+        ###天井付近壁
+        pyxel.rect(0,0,600,ceil_height,15)
+        ###レール
+        pyxel.bltm(  0 - self.camera.x,ceil_height -5,0,0,8*122,8*40,8*1,3)
+        pyxel.bltm(390 - self.camera.x,ceil_height -5,0,0,8*122,8*40,8*1,3)
+        ###縁側
+        pyxel.bltm(70 - 2    - self.camera.x,ceil_height + window_height -16,0,0,8*120, 8*11,8*2,0)
+        pyxel.bltm(27 + 8*10.5 - self.camera.x,ceil_height + window_height -16,0,0,8*120,-8*11,8*2,0)
+        ###窓１内窓
+        pyxel.bltm(   0 - self.camera.x,ceil_height,0,   0,8*104,8*9,window_height,3) ##左
+        ###窓２外窓
+        pyxel.pal(7,13) ###フレームを暗く
+        pyxel.pal(5,13) ###取っ手を暗く
+        pyxel.bltm(8*28 - self.camera.x,ceil_height,0,8*12,8*104,8*9,window_height,3) ##右1-1
+        pyxel.pal()
+        pyxel.pal(7,13) ###フレームを暗く
+        pyxel.bltm(8*37 -1 - self.camera.x,ceil_height,0,8* 8 -2,8*104,8*1,window_height,3) ##右1-2
+        pyxel.pal()
+        ###窓２内窓
+        pyxel.bltm(8*24    - self.camera.x,ceil_height,       0,8*12,8*104,8*9,window_height,3) ##右2-1
+        pyxel.bltm(8*33    - self.camera.x,ceil_height,       0,8* 7,8*104,8*2,window_height,3) ##右2-2
+        pyxel.rect(8*34 -1 - self.camera.x,ceil_height + 8*8 +4,   3,8,7) ##取手消す
+        ###窓３外窓
+        pyxel.pal(7,13) ###フレームを暗く
+        pyxel.pal(5,13) ###取っ手を暗く
+        pyxel.bltm(8*59 +1 - self.camera.x,ceil_height,0,8*12,8*104,8*9,window_height,3)
+        pyxel.pal()
+        pyxel.pal(7,13) ###フレームを暗く
+        pyxel.bltm(8*68    - self.camera.x,ceil_height,0,8* 8 -2,8*104,8*1,window_height,3)
+        pyxel.pal()
+        ###窓３内窓
+        pyxel.bltm(8*51 +1   - self.camera.x,ceil_height,       0,8*12,8*104,8*9,window_height,3) ##右2-1
+        pyxel.bltm(8*60    - self.camera.x,ceil_height,       0,8* 7,8*104,8*2,window_height,3) ##右2-2
+        pyxel.rect(8*61  - self.camera.x,ceil_height + 8*8 +4,   3,8,7) ##取手消す
+        ###屋内床
+        pyxel.rect(0,ceil_height + window_height,600,300,15)
+        ###屋内壁
+        wall_width = 110
+        pyxel.rect(250 + 56 - self.camera.x, ceil_height, wall_width, window_height, 15)
+        ###カーペット1
+        pyxel.bltm(    0    - self.camera.x,ceil_height + window_height + 15,0,8*31,8*104,8* 5,8*8,0)
+        pyxel.bltm(8*  5 -1 - self.camera.x,ceil_height + window_height + 15,0,8*36,8*104,8*10,8*8,0)
+        pyxel.bltm(8* 15 -2 - self.camera.x,ceil_height + window_height + 15,0,8*36,8*104,8*10,8*8,0)
+        pyxel.bltm(8* 25 -3 - self.camera.x,ceil_height + window_height + 15,0,8*36,8*104,8*10,8*8,0)
+        pyxel.bltm(8* 35 -4 - self.camera.x,ceil_height + window_height + 15,0,8*46,8*104,8* 8,8*8,0)
+        ##電源
+        pyxel.blt( 277     - self.camera.x,150,2,144,160,16,16,3)
+        pyxel.line(277 +15 - self.camera.x,157,277 +58 - self.camera.x,157,13)
+        pyxel.line(335     - self.camera.x,157,335 +15 - self.camera.x,142,13)
+        pyxel.rect(347     - self.camera.x,125,7,10,7)
+        pyxel.rect(349     - self.camera.x,129,3,2,13)
+        pyxel.line(350     - self.camera.x,142,350     - self.camera.x,130,13)
+        ###カーペット2
+        pyxel.bltm(8* 45    - self.camera.x,ceil_height + window_height + 15,0,8*46,8*104,-8* 8,8*8,0)
+        pyxel.bltm(8* 53 -1 - self.camera.x,ceil_height + window_height + 15,0,8*36,8*104, 8*10,8*8,0)
+        pyxel.bltm(8* 63 -2 - self.camera.x,ceil_height + window_height + 15,0,8*36,8*104, 8*10,8*8,0)
+        pyxel.bltm(8* 73 -3 - self.camera.x,ceil_height + window_height + 15,0,8*36,8*104, 8*10,8*8,0)
+        pyxel.bltm(8* 83 -4 - self.camera.x,ceil_height + window_height + 15,0,8*31,8*104,-8* 5,8*8,0)
+        ###本棚1
+        pyxel.bltm(15          - self.camera.x, ceil_height + window_height - 8* 7 +5, 0, 8*31, 8*112,  8* 2, 8* 7, 3)
+        pyxel.bltm(15 + 8*2 -1 - self.camera.x, ceil_height + window_height - 8* 7 +5, 0, 8*31, 8*112, -8* 2, 8* 7, 3)
+        # 1段目
+        pyxel.blt(15 +2        - self.camera.x, ceil_height + window_height - 8* 7 +8, 2, 160, 144, 2, 8, 8)
+        pyxel.blt(15 +2 +2     - self.camera.x, ceil_height + window_height - 8* 7 +8, 2, 162, 144,14, 8, 8)
+        # 2段目
+        pyxel.blt(15 +2        - self.camera.x, ceil_height + window_height - 8* 4   , 2, 160, 152,16, 8, 0)
+        pyxel.blt(15 +2 +16    - self.camera.x, ceil_height + window_height - 8* 4   , 2, 160, 152,10, 8, 0)
+        # 3段目
+        pyxel.blt(15 +2 +10    - self.camera.x, ceil_height + window_height - 8* 2   , 2, 160, 160, 1, 8, 8)
+        pyxel.blt(15 +2 +11    - self.camera.x, ceil_height + window_height - 8* 2   , 2, 161, 160,15, 8, 0)
+        ###本棚２
+        pyxel.bltm(560          - self.camera.x, ceil_height + window_height - 8* 7 +5, 0, 8*31, 8*112,  8* 2, 8* 7, 3)
+        pyxel.bltm(560 + 8*2 -1 - self.camera.x, ceil_height + window_height - 8* 7 +5, 0, 8*31, 8*112, -8* 2, 8* 7, 3)
+        # 1段目
+        pyxel.blt(560 +2        - self.camera.x, ceil_height + window_height - 8* 7 +8, 2, 160, 144, 2, 8, 8)
+        pyxel.blt(560 +2 +2     - self.camera.x, ceil_height + window_height - 8* 7 +8, 2, 162, 144,14, 8, 8)
+        # 2段目
+        pyxel.blt(560 +2        - self.camera.x, ceil_height + window_height - 8* 4   , 2, 160, 152,16, 8, 0)
+        pyxel.blt(560 +2 +16    - self.camera.x, ceil_height + window_height - 8* 4   , 2, 160, 152,10, 8, 0)
+        # 3段目
+        pyxel.blt(560 +2 +10    - self.camera.x, ceil_height + window_height - 8* 2   , 2, 160, 160, 1, 8, 8)
+        pyxel.blt(560 +2 +11    - self.camera.x, ceil_height + window_height - 8* 2   , 2, 161, 160,15, 8, 0)
+        ###絵
+        pyxel.bltm(318     - self.camera.x, ceil_height +  0, 0, 8*21, 8*104, 8*5, 8*5, 10)
+        pyxel.bltm(318 +35 - self.camera.x, ceil_height +  0, 0, 8*26, 8*104, 8*5, 8*5, 10)
+        pyxel.bltm(318     - self.camera.x, ceil_height + 35, 0, 8*21, 8*109, 8*5, 8*5, 10)
+        pyxel.bltm(318 +35 - self.camera.x, ceil_height + 35, 0, 8*26, 8*109, 8*5, 8*5, 10)
+        pyxel.bltm(318     - self.camera.x, ceil_height + 70, 0, 8*21, 8*114, 8*5, 8*5, 10)
+        pyxel.bltm(318 +35 - self.camera.x, ceil_height + 70, 0, 8*26, 8*114, 8*5, 8*5, 10)
+        ###カーテン
+        pyxel.bltm(250 + 44 - self.camera.x, ceil_height -3, 0, 8*9, 8*104, 8*3, window_height, 0)
+        pyxel.bltm(350 + 44 - self.camera.x, ceil_height -3, 0, 8*9, 8*104, 8*3, window_height, 0)
+
+        ###時計
+        for i in range(0, 35):
+            pyxel.blt(10 +23 * i - self.camera.x, 0, 1, 0, 216, 16, 16, 3) 
+        ###ストーブの光
+        ###frame-countで光のゆらぎを表現した円を描画
+        pyxel.circ(327 - self.camera.x, ceil_height + window_height -1, 2*Math.sin(pyxel.frame_count // 10 % 16 * Math.pi/16)+12,  9)
+        pyxel.circ(327 - self.camera.x, ceil_height + window_height -1, 2*Math.sin(pyxel.frame_count // 10 % 15 * Math.pi/16)+ 8, 10)
+        ###ストーブ
+        pyxel.blt(320 - self.camera.x, ceil_height + window_height - 8, 1, 0, 232, 16, 24, 3)
+        ###ヤカン
+        if pyxel.frame_count // 20 % 2 == 0:
+            pyxel.blt(318 - self.camera.x, ceil_height + window_height -17, 1, 144, 88, 16, 11, 0)
+        elif pyxel.frame_count // 20 % 2 == 1:
+            pyxel.blt(318 - self.camera.x, ceil_height + window_height -17, 1, 144, 99, 16, 11, 0)
     def drawParticles(self):
         ### 有効なパーティクルをすべて描画する
         if len(self.psys_instances) > 0:
@@ -1504,11 +1893,36 @@ class MyApp:
                 self.bdf2.draw_text(150, 2, "PRESS V : particle生成", 7) 
 
             if(self.gamestate.scene == C_SCENE_GOLD):
-                ###デモタイトル表示
-                self.bdf2.draw_text(150, 2, "PRESS E : IN/OUT", 7) 
-                self.bdf2.draw_text(150,14, "PRESS R : 白銀比/黄金比", 7) 
-                self.bdf2.draw_text(150,26, "PRESS T : angle +15", 7) 
+                ###被playerの位置によって描画順序を変える対象の描画
+                # self.drawGoldFT()
+                ###sandfall地点とplayerの位置比較で前景として描画
+                for i in range(0, 4):
+                    if self.player.position_y <= self.sandfall_points[i] :
+                        self.drawSandFlow(self.sandx[i] -self.camera.x, self.sandy[i], self.width[i], self.times[i], self.sand_frame[i%4],i) #x,y、幅、長さセット、描画周期のスタート位置
 
+                ###最前景用
+                scroll_ratio5 = 1.05
+                pyxel.bltm( -95 -self.camera.x*scroll_ratio5,160,0,8* 0,8*48,8*23,8* 8,0)
+                pyxel.bltm( -40 -self.camera.x*scroll_ratio5,160,0,8* 0,8*33,8*22,8*11,0)
+                pyxel.bltm( 310 -self.camera.x*scroll_ratio5,160,0,8* 0,8*33,8*22,8*11,0)
+                pyxel.bltm( 470 -self.camera.x*scroll_ratio5,176,0,8* 0,8*48,8*23,8* 8,0)
+                pyxel.bltm( 180 -self.camera.x*scroll_ratio5,160,0,8* 0,8*33,8*22,8*11,0)
+                ###岩
+                pyxel.blt( 142 -self.camera.x*scroll_ratio5, 205,1,160,0,16*2,16*2,0)
+
+                ###流砂
+                for i in range(4, 9):
+                    self.drawSandFlow(self.sandx[i] -self.camera.x*scroll_ratio5, self.sandy[i], self.width[i], self.times[i], self.sand_frame[i%4],i) #x,y、幅、長さセット、描画周期のスタート位置
+
+                ###デモタイトル表示
+                # self.bdf2.draw_text(150, 2, "PRESS E : IN/OUT", 7) 
+                # self.bdf2.draw_text(150,14, "PRESS R : 白銀比/黄金比", 7) 
+                # self.bdf2.draw_text(150,26, "PRESS T : angle +15", 7) 
+
+            if(self.gamestate.scene == C_SCENE_SUN):
+                ###
+                for i in range(0, 60):
+                    pyxel.blt( i*20 - self.camera.x,184,2,192,104,16,48,0)
 
             ###メニュー＆会話用のエリアを黒く表示する
             pyxel.rect(0, 232, 300, 68, 0)    
@@ -1761,53 +2175,84 @@ class MyApp:
                     ##スペース打鍵によるチェックフラグが有効中
                     else:
                         if(self.display_finished): ##分割テキストを表示完了
-                            ###話しかけた・調べた対象のオブジェクトがキャラクターだった場合、方向を元の位置に戻す
-                            if (self.nearest_obj.__class__.__name__ == "Character"):
-                                self.nearest_obj.player_direction = self.checking_obj_direction
+                            ###テキストが表示完了しているとき
+                            if(len(self.wk_textset3)==1) and \
+                            (self.framecount_for_text_disp >= (len(self.wk_textset3[0]))) \
+                            or(len(self.wk_textset3)==2) and \
+                            (self.framecount_for_text_disp >= (len(self.wk_textset3[0])+len(self.wk_textset3[1]))) \
+                            or(len(self.wk_textset3)==3) and \
+                            (self.framecount_for_text_disp >= (len(self.wk_textset3[0])+len(self.wk_textset3[1])+len(self.wk_textset3[2]))):
 
-                            self.pressed_space_checking = False #「SPACEキー打鍵によるチェック中」フラグをOFF
-                            self.inputdelay_cnt = self.inptdelay_C #入力受付遅延用カウンタをリセット
-                            self.wk_textset_divided = list() #表示用テキストをリセット。
-                            self.text_divided = False #分割済みフラグのクリア
+                                ###話しかけた・調べた対象のオブジェクトがキャラクターだった場合、方向を元の位置に戻す
+                                if (self.nearest_obj.__class__.__name__ == "Character"):
+                                    self.nearest_obj.player_direction = self.checking_obj_direction
 
-                            ###話しかけた・調べた対象のオブジェクトがドアだった場合、戸が持つルーム番号に応じてgamestateのシーン番号を変える
-                            if (self.nearest_obj.__class__.__name__ == "Door"):
-                                if (self.nearest_obj.room_no != 0)  or \
-                                (self.nearest_obj.room_no == 0 and self.gamestate.scene != 0):
-                                    self.deleteObjectsDependingOnScene() ##現在のシーンに応じてオブジェクトを削除しリセット
-                                    self.gamestate.door_open_array_bf = self.gamestate.door_open_array.copy() #ドアの開閉状態を保持
-                                    ###現在のシーンで戸を出るとき、次のナンバリングの戸をアンロックする
-                                    next_scene = (self.gamestate.scene + 1) % len(self.gamestate.door_open_array)
-                                    self.gamestate.unlock_door(next_scene)
-                                    ###テキスト処理用変数をリセット
-                                    self.inputdelay_cnt = 0 #入力受付遅延用カウンタをリセット
-                                    self.pressed_space_checking = False #「SPACEキー打鍵によるチェック中」フラグをOFF
-                                    # ###scroll関係変数をリセット
-                                    self.scroll_direction = 0
-                                    # self.scroll_x = 0
-                                    # self.scroll_distance = 0
-                                    self.gamestate.scene = self.nearest_obj.room_no
-                                    self.gamestate.scenario[0][0] = self.nearest_obj.room_no
-                                    ###パララックス背景用変化率をSceneに応じてリセット
-                                    self.parallax_value_set(self.gamestate.scene)
-                                    ###パララックス背景用スクロール値をリセット
-                                    self.scroll_positions = [0.1 for _ in range(9)]
-                                    self.generateObjects() ##現在のシーンに応じてオブジェクトを生成
-                                    ###チェック中のオブジェクトをリセット
-                                    self.nearest_obj = None
-                                    ###チェック中のオブジェクトがいる方向、をリセット
-                                    self.checking_obj_direction = 4
-                                    ###パーティクルシステムのタイマーをリセット
-                                    self.timer_for_psys = 0
-                                    # ###パーティクルシステムのインスタンスをリセット
-                                    # self.psys_instances = list()
-                            
-                            ###話しかけた・調べた対象がキャラクターまたはアタリオブジェクトだった場合、取得アイテムチェックを呼び出す。
-                            if (self.nearest_obj.__class__.__name__ in("Character", "Atari")):
-                                self.checkGetItem(self.nearest_obj)
+                                self.pressed_space_checking = False #「SPACEキー打鍵によるチェック中」フラグをOFF
+                                self.inputdelay_cnt = self.inptdelay_C #入力受付遅延用カウンタをリセット
+                                self.wk_textset_divided = list() #表示用テキストをリセット。
+                                self.text_divided = False #分割済みフラグのクリア
+
+                                ###話しかけた・調べた対象のオブジェクトがドアだった場合、戸が持つルーム番号に応じてgamestateのシーン番号を変える
+                                if (self.nearest_obj.__class__.__name__ == "Door"):
+                                    if (self.nearest_obj.room_no != 0)  or \
+                                    (self.nearest_obj.room_no == 0 and self.gamestate.scene != 0):
+                                        self.deleteObjectsDependingOnScene() ##現在のシーンに応じてオブジェクトを削除しリセット
+                                        self.gamestate.door_open_array_bf = self.gamestate.door_open_array.copy() #ドアの開閉状態を保持
+                                        ###現在のシーンで戸を出るとき、次のナンバリングの戸をアンロックする
+                                        next_scene = (self.gamestate.scene + 1) % len(self.gamestate.door_open_array)
+                                        self.gamestate.unlock_door(next_scene)
+                                        ###テキスト処理用変数をリセット
+                                        self.inputdelay_cnt = 0 #入力受付遅延用カウンタをリセット
+                                        self.pressed_space_checking = False #「SPACEキー打鍵によるチェック中」フラグをOFF
+                                        # ###scroll関係変数をリセット
+                                        self.scroll_direction = 0
+                                        # self.scroll_x = 0
+                                        # self.scroll_distance = 0
+                                        self.gamestate.scene = self.nearest_obj.room_no
+                                        self.gamestate.scenario[0][0] = self.nearest_obj.room_no
+                                        ###パララックス背景用変化率をSceneに応じてリセット
+                                        self.parallax_value_set(self.gamestate.scene)
+                                        ###パララックス背景用スクロール値をリセット
+                                        self.scroll_positions = [0.1 for _ in range(9)]
+                                        self.generateObjects() ##現在のシーンに応じてオブジェクトを生成
+                                        ###チェック中のオブジェクトをリセット
+                                        self.nearest_obj = None
+                                        ###チェック中のオブジェクトがいる方向、をリセット
+                                        self.checking_obj_direction = 4
+                                        ###パーティクルシステムのタイマーをリセット
+                                        self.timer_for_psys = 0
+                                        # ###パーティクルシステムのインスタンスをリセット
+                                        # self.psys_instances = list()
+                                
+                                ###話しかけた・調べた対象がキャラクターまたはアタリオブジェクトだった場合、取得アイテムチェックを呼び出す。
+                                if (self.nearest_obj.__class__.__name__ in("Character", "Atari")):
+                                    self.checkGetItem(self.nearest_obj)
+
+                            else:
+                                ###テキストが表示完了していないとき、テキスト表示を完了させる
+                                self.framecount_for_text_disp = 999
+
 
                         else: ##分割テキストを表示未完了
-                            self.wk_text_disp_times += 1
+                            ###テキスト表示用フレームカウントが規定値に達している場合に打鍵を受け付ける
+                            if(len(self.wk_textset3)==1) and \
+                            (self.framecount_for_text_disp >= (len(self.wk_textset3[0]))) \
+                            or(len(self.wk_textset3)==2) and \
+                            (self.framecount_for_text_disp >= (len(self.wk_textset3[0])+len(self.wk_textset3[1]))) \
+                            or(len(self.wk_textset3)==3) and \
+                            (self.framecount_for_text_disp >= (len(self.wk_textset3[0])+len(self.wk_textset3[1])+len(self.wk_textset3[2]))):
+                                ###テキストセット表示カウンタを進める
+                                self.wk_text_disp_times += 1
+                                ###テキスト表示経過時間の管理変数をリセット
+                                self.framecount_for_text_disp = 0
+                                self.framecount_for_text_disp1 = 0
+                                self.framecount_for_text_disp2 = 0
+                                self.framecount_for_text_disp3 = 0
+                                self.framecount_for_text_disp_first = 0
+                            else:
+                                ###テキストが表示完了していないとき、テキスト表示を完了させる
+                                self.framecount_for_text_disp = 999
+
                 
                     ###Doorオブジェクトのopen/close状態変化
                     if self.wk_player.player_direction == 0:
@@ -1865,7 +2310,7 @@ class MyApp:
         if scene == 0: ##HOME　   #空、雲、海、波の単振動沖合、島茶、島緑、波の単振動波打ち際１、波の単振動波打ち際２
             self.scroll_speeds = [0.1, 0.2, 0.3, 0.3, 0.5, 0.5, 0.3, 0.3, 1.0, 1.2]
         elif scene == 1: ##MOON　 #最奥背景、星々、月と影、雲（背景）、崖、前景１、前景２、雲（前景）
-            self.scroll_speeds = [0.1, 0.2, 0.25, 0.3, 0.5, 0.55, 0.6, 0.7, 0, 0]
+            self.scroll_speeds = [0.95, 1.05, 0.90, 1.15, 0.5, 0.55, 0.6, 0.7, 0, 0]
         elif scene == 2: ##FIRE  #最奥背景、灯籠、ガラスの橋、ガラスに反射する光、前景を落ちる火、横に吹く風パーティクル
             self.scroll_speeds = [0.1, 0.2, 0.3, 0.3, 0.5, 0.5, 0.3, 0.3, 1.0, 1.2]
         elif scene == 3: ##WATER #最奥背景、水中の影、奥雨、手前雨、前景１、前景２
@@ -1957,6 +2402,12 @@ class MyApp:
                 if not(self.wk_text_divided_remain % 3 == 0):
                     self.display_cnt += 1
                 self.wk_text_disp_times = 1
+                ###テキスト表示経過時間の管理変数をリセット
+                self.framecount_for_text_disp = 0
+                self.framecount_for_text_disp1 = 0
+                self.framecount_for_text_disp2 = 0
+                self.framecount_for_text_disp3 = 0
+                self.framecount_for_text_disp_first = 0
                 self.text_divided = True
     ####-------------------------------------------------------------------------------
     def drawMessageAndWindow(self):
@@ -1974,23 +2425,48 @@ class MyApp:
                     ###キャラクタ画像
                     if(self.talking_chara_no == 0):
                         pyxel.blt(8, 238, 0,  0,  0, 16, 16, 3)
-                        #self.bdf1.draw_text(36, 240, "GIRL", 7)
                     if(self.talking_chara_no == 1):
                         pyxel.blt(8, 238, 0, 16,  0, 16, 16, 3)
-                        #self.bdf1.draw_text(36, 240, "WOLF", 7)
                     if(self.talking_chara_no == 2):
-                        pyxel.blt(8, 238, 0, 32,  8, 16, 16, 3)
-                        #self.bdf1.draw_text(36, 240, "BOY", 7)
+                        pyxel.blt(8, 238, 1, 16,128, 16, 16, 3)
+                    if(self.talking_chara_no == 7):
+                        pyxel.blt(8, 238, 1, 16,168, 16, 16, 3)
                     ###台紙重ね
                     pyxel.blt(4, 249, 0, 48, 24, 24,  8, 3)
 
                 ###テキストの表示
+                ###テキストをframecountの経過に応じて左から開示できるよう、テキスト表示中経過framecountを算出
+                if (self.framecount_for_text_disp == 0) and (self.framecount_for_text_disp1 == 0) and (self.framecount_for_text_disp2 == 0) and (self.framecount_for_text_disp3 == 0) and (self.framecount_for_text_disp_first == 0):
+                    self.framecount_for_text_disp_first = pyxel.frame_count
+                else:
+                    if pyxel.frame_count % 2 == 0:
+                        self.framecount_for_text_disp += 1
+                        if(len(self.wk_textset3)>=1):
+                            if self.framecount_for_text_disp < len(self.wk_textset3[0]):
+                                self.framecount_for_text_disp1 += 1
+                                self.framecount_for_text_disp2  = 0
+                                self.framecount_for_text_disp3  = 0
+                        if(len(self.wk_textset3)>=2):
+                            if len(self.wk_textset3[0]) <= self.framecount_for_text_disp < (len(self.wk_textset3[0])+len(self.wk_textset3[1])):
+                                self.framecount_for_text_disp1  = 0
+                                self.framecount_for_text_disp2 += 1
+                                self.framecount_for_text_disp3  = 0
+                        if(len(self.wk_textset3)>=3):
+                            if (len(self.wk_textset3[0])+len(self.wk_textset3[1])) <= self.framecount_for_text_disp < 84:
+                                self.framecount_for_text_disp1  = 0
+                                self.framecount_for_text_disp2  = 0
+                                self.framecount_for_text_disp3 += 1
+                        # self.framecount_for_text_disp = pyxel.frame_count - self.framecount_for_text_disp_first
                 ##text_disp_times（スペース打鍵回数＋１）が表示に必要な回数を超えるまで
                 if(self.wk_text_disp_times <= self.display_cnt):
                     ###３つ取得
                     self.wk_textset3 = self.wk_textset_divided[3*(self.wk_text_disp_times -1):3*(self.wk_text_disp_times)]
                 if(self.wk_text_disp_times == self.display_cnt): ##最後。次のスペース打鍵で完了する
-                    self.display_finished = True
+                    ###テキスト表示用フレームカウントが規定値に達している場合にテキスト表示完了とする
+                    if (len(self.wk_textset3)==1 and self.framecount_for_text_disp1 >= len(self.wk_textset3[0])) -1 \
+                        or (len(self.wk_textset3)==2 and self.framecount_for_text_disp2 >= len(self.wk_textset3[0]) + len(self.wk_textset3[1])) -1 \
+                        or (len(self.wk_textset3)==3 and self.framecount_for_text_disp3 >= len(self.wk_textset3[0]) + len(self.wk_textset3[1]) + len(self.wk_textset3[2]) -1):
+                        self.display_finished = True
                 ##画面下部へテキストを表示する
                 if(self.talking_chara_no == 99):
                     ###やや中央寄りに配置する
@@ -2000,6 +2476,35 @@ class MyApp:
                         self.bdf1.draw_text(10, 263, self.wk_textset3[1], 7)
                     if(len(self.wk_textset3)>=3):
                         self.bdf1.draw_text(10, 277, self.wk_textset3[2], 7)
+                    ### テキストをframecountの経過に応じて左から開示できるよう、背景色で隠す
+                    width_per_word = 10
+                    height_per_word = 10
+                    masking_color = 13
+                    ###1行目
+                    if(len(self.wk_textset3)>=1):
+                        if (len(self.wk_textset3[0]) > 0) and (self.framecount_for_text_disp < len(self.wk_textset3[0])):
+                            lenwords_displayed   = len(self.wk_textset3[0]) - (self.framecount_for_text_disp1)
+                            lenwords_undisplayed = len(self.wk_textset3[0]) - lenwords_displayed
+                            pyxel.rect( 10 + lenwords_undisplayed * width_per_word, 249,
+                                        lenwords_displayed * width_per_word,  height_per_word, masking_color)
+                    ###2行目
+                    if(len(self.wk_textset3)>=2):
+                        if (len(self.wk_textset3[1]) > 0) and (self.framecount_for_text_disp < len(self.wk_textset3[0])):
+                            pyxel.rect( 10, 263, 28 * width_per_word,  height_per_word, masking_color)
+                        if (len(self.wk_textset3[1]) > 0) and (len(self.wk_textset3[0]) <= self.framecount_for_text_disp < (len(self.wk_textset3[0]) + len(self.wk_textset3[1]))):
+                            lenwords_displayed   = len(self.wk_textset3[1]) - (self.framecount_for_text_disp2)
+                            lenwords_undisplayed = len(self.wk_textset3[1]) - lenwords_displayed
+                            pyxel.rect( 10 + lenwords_undisplayed * width_per_word, 263,
+                                        lenwords_displayed * width_per_word,  height_per_word, masking_color)
+                    ###3行目
+                    if(len(self.wk_textset3)>=3):
+                        if (len(self.wk_textset3[2]) > 0) and (self.framecount_for_text_disp < (len(self.wk_textset3[0])+len(self.wk_textset3[1]))):
+                            pyxel.rect( 10, 277, 28 * width_per_word,  height_per_word, masking_color)
+                        if (len(self.wk_textset3[2]) > 0) and ((len(self.wk_textset3[0])+len(self.wk_textset3[1])) <= self.framecount_for_text_disp < 84):
+                            lenwords_displayed   = len(self.wk_textset3[2]) - (self.framecount_for_text_disp3)
+                            lenwords_undisplayed = len(self.wk_textset3[2]) - lenwords_displayed
+                            pyxel.rect( 10 + lenwords_undisplayed * width_per_word, 277,
+                                        lenwords_displayed * width_per_word,  height_per_word, masking_color)
                 else:
                     ###下に詰めて表示する
                     if(len(self.wk_textset3)>=1):
@@ -2008,6 +2513,44 @@ class MyApp:
                         self.bdf1.draw_text(10, 271, self.wk_textset3[1], 7)
                     if(len(self.wk_textset3)>=3):
                         self.bdf1.draw_text(10, 283, self.wk_textset3[2], 7)
+                    ### テキストをframecountの経過に応じて左から開示できるよう、背景色で隠す
+                    width_per_word = 10
+                    height_per_word = 10
+                    masking_color = 13
+                    ###1行目
+                    if(len(self.wk_textset3)>=1):
+                        if (len(self.wk_textset3[0]) > 0) and (self.framecount_for_text_disp < len(self.wk_textset3[0])):
+                            lenwords_displayed   = len(self.wk_textset3[0]) - (self.framecount_for_text_disp1)
+                            lenwords_undisplayed = len(self.wk_textset3[0]) - lenwords_displayed
+                            pyxel.rect( 10 + lenwords_undisplayed * width_per_word, 259,
+                                        lenwords_displayed * width_per_word,  height_per_word, masking_color)
+                    ###2行目
+                    if(len(self.wk_textset3)>=2):
+                        if (len(self.wk_textset3[1]) > 0) and (self.framecount_for_text_disp < len(self.wk_textset3[0])):
+                            pyxel.rect( 10, 271, 28 * width_per_word,  height_per_word, masking_color)
+                        if (len(self.wk_textset3[1]) > 0) and (len(self.wk_textset3[0]) <= self.framecount_for_text_disp < (len(self.wk_textset3[0]) + len(self.wk_textset3[1]))):
+                            lenwords_displayed   = len(self.wk_textset3[1]) - (self.framecount_for_text_disp2)
+                            lenwords_undisplayed = len(self.wk_textset3[1]) - lenwords_displayed
+                            pyxel.rect( 10 + lenwords_undisplayed * width_per_word, 271,
+                                        lenwords_displayed * width_per_word,  height_per_word, masking_color)
+                    ###3行目
+                    if(len(self.wk_textset3)>=3):
+                        if (len(self.wk_textset3[2]) > 0) and (self.framecount_for_text_disp < (len(self.wk_textset3[0])+len(self.wk_textset3[1]))):
+                            pyxel.rect( 10, 283, 28 * width_per_word,  height_per_word, masking_color)
+                        if (len(self.wk_textset3[2]) > 0) and ((len(self.wk_textset3[0])+len(self.wk_textset3[1])) <= self.framecount_for_text_disp < 84):
+                            lenwords_displayed   = len(self.wk_textset3[2]) - (self.framecount_for_text_disp3)
+                            lenwords_undisplayed = len(self.wk_textset3[2]) - lenwords_displayed
+                            pyxel.rect( 10 + lenwords_undisplayed * width_per_word, 283,
+                                        lenwords_displayed * width_per_word,  height_per_word, masking_color)
+                ###効果音
+                if pyxel.frame_count % 2 == 0:
+                    if(len(self.wk_textset3)==1) and \
+                    (self.framecount_for_text_disp < (len(self.wk_textset3[0]))) \
+                    or(len(self.wk_textset3)==2) and \
+                    (self.framecount_for_text_disp < (len(self.wk_textset3[0])+len(self.wk_textset3[1]))) \
+                    or(len(self.wk_textset3)==3) and \
+                    (self.framecount_for_text_disp < (len(self.wk_textset3[0])+len(self.wk_textset3[1])+len(self.wk_textset3[2]))):
+                        pyxel.play(3, 28)
 
     def textDivide(self, textset, textset_divided, max_dispwords = C_MAX_DISPWORDS):
         ###PLAYモード・MENUモード共通ロジック

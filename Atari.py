@@ -14,8 +14,8 @@ C_PX_AROUND_ATARI = 6 #当たり判定用のy軸不可侵エリア幅
 # 3 : 猫
 # 4 : 木の幹１
 # 5 : 木の幹２
-#
-#
+# 6 : ストーブ&ヤカン
+# 7 : girls
 
 ###gamestate.scene用定数
 C_SCENE_HOME  = 0
@@ -36,9 +36,11 @@ class Atari(GameObject):
         super().__init__(x,y)
         self.width = C_ATARI_WIDTH
         self.height = C_ATARI_HEIGHT
+        self.collision_width = C_PX_AROUND_ATARI
+        self.collision_height = C_PX_AROUND_ATARI
         ###表示順序の基準になる、Door足元の座標
-        self.position_x = self.x + C_ATARI_WIDTH/2
-        self.position_y = self.y + C_ATARI_HEIGHT
+        self.position_x = self.x + self.width/2
+        self.position_y = self.y + self.height
 
         self.flg_reaction = False
         self.is_playing = False
@@ -53,6 +55,19 @@ class Atari(GameObject):
         self.draw_x = 0
         self.draw_y = 0
 
+    def changeSize(self, width, height):
+        self.width = width
+        self.height = height
+
+    def changePosition(self, x, y):
+        ###表示順序の基準になる、Door足元の座標
+        self.position_x = self.x + x
+        self.position_y = self.y + y
+
+    def changeCollisionSize(self, width, height):
+        self.collision_width = width
+        self.collision_height = height
+
     def update(self):
         ###表示順序の基準となる、足元の座標情報を更新する
         self.position_x = self.x + C_ATARI_WIDTH/2
@@ -64,19 +79,34 @@ class Atari(GameObject):
             self.frames02 = Math.floor(pyxel.frame_count/5) % 12
             self.frames03 = Math.floor((pyxel.frame_count + 11)/5) % 12
             self.frames04 = Math.floor((pyxel.frame_count + 2)/5) % 12
-            
-            pyxel.blt(self.draw_x,    self.draw_y +4,  2, 160, 0 + self.frames01 * 16, 16, 16, 0)
+            if Math.floor(pyxel.frame_count/8) % 7 != 6:
+                pyxel.blt(self.draw_x,    self.draw_y +4,  2, 160, 0 + self.frames01 * 16, 16, 16, 0)
+
+    # def is_colliding_with(self, other):
+    #     range_x = self.collision_width
+    #     range_y = self.collision_height
+
+    #     if self.position_x + range_x > other.position_x:
+    #         if self.position_x < other.position_x + range_x:
+    #             if self.position_y + range_y > other.position_y:
+    #                 if self.position_y < other.position_y + range_y:
+    #                     return True
+    #     return False
 
     def is_colliding_with(self, other):
-        range_x = self.width
-        range_y = C_PX_AROUND_ATARI
+        range_x_self = self.collision_width
+        range_y_self = self.collision_height
+        range_x_other = 8
+        range_y_other = 8
 
-        if self.position_x + range_x > other.position_x:
-            if self.position_x < other.position_x + range_x:
-                if self.position_y + range_y > other.position_y:
-                    if self.position_y < other.position_y + range_y:
-                        return True
+        if self.position_x + range_x_self > other.position_x and \
+        self.position_x < other.position_x + range_x_other:
+            if self.position_y + range_y_self > other.position_y and \
+            self.position_y < other.position_y + range_y_other:
+                return True
+
         return False
+
 
     def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no, door_open_array):
         ###当該シーン・シナリオ配下でcharacter_noがプレイヤーconversation_withに話しかけられた場合の発話
@@ -123,3 +153,11 @@ class Atari(GameObject):
                 # if self.rtn_txt_no == 1のとき、ゲーム本体側でアイテムを取得の処理を行い、 rtn_txt_no += 1 される。   
                 if self.rtn_txt_no == 2:
                     return ["風に葉がさざめき、心地よい音がする。","",""]
+        if (self.scene_no == C_SCENE_GOLD) :
+            if self.obj_no == 7: ### girls
+                if self.rtn_txt_no == 0:
+                    return ["あはははははは！くるくるーー！","","","おにーちゃんだーれ？？？","",""]
+        if (self.scene_no == C_SCENE_SUN) :
+            if self.obj_no == 6: ### ストーブ&ヤカン
+                if self.rtn_txt_no == 0:
+                    return ["ストーブが暖かい。","ヤカンにはたっぷりのお湯が沸いている。",""]

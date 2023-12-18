@@ -3,7 +3,7 @@ import math
 import random
 
 class Moon:
-    def __init__(self, center_x, center_y, radius, increment=0.001, num_seas=100, num_stars=200):
+    def __init__(self, center_x, center_y, radius, increment=0.001, num_seas=100, num_stars=400):
         self.center_x = center_x
         self.center_y = center_y
         self.radius = radius
@@ -37,12 +37,22 @@ class Moon:
         phase_increment = delta_time * self.increment  # この値を調整して、満ち欠けの速度を変更
         self.current_phase = (self.current_phase + phase_increment) % 1.0
 
-    def draw(self, camera_x=0):
+    def draw(self, camera_x=0, scroll_speeds=[0.95, 1.05, 0.90, 1.15]):
         angle = self.current_phase * 2 * math.pi
 
         # 星を描画
-        for x, y in self.stars:
-            pyxel.pset(x -camera_x, y, 7)
+        num_stars = len(self.stars) - 1
+        for i in range(num_stars):
+            pllx_camera_x = 0
+            if i % 4 == 0:
+                pllx_camera_x = camera_x * scroll_speeds[0]
+            elif i % 4 == 1:
+                pllx_camera_x = camera_x * scroll_speeds[1]
+            elif i % 4 == 2:
+                pllx_camera_x = camera_x * scroll_speeds[2]
+            elif i % 4 == 3:
+                pllx_camera_x = camera_x * scroll_speeds[3]
+            pyxel.pset(self.stars[i][0] -pllx_camera_x, self.stars[i][1], 7)
 
         # 月の本体（常に表示）
         pyxel.circ(self.center_x -camera_x, self.center_y, self.radius, 10)
