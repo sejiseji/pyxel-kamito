@@ -219,57 +219,57 @@ class Character(GameObject):
 
     def arrow_input_check(self, move_speed):
         if not(self.env_text_displaying):
-            if pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W):
+            if pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP):
                 ### 他のキーはその方向を向いて立ち止まる
-                if pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z):
+                if pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
                     self.player_direction = 1
                     self.moving = False
-                elif pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A):
+                elif pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
                     self.player_direction = 2
                     self.moving = False
-                elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S):
+                elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
                     self.player_direction = 3
                     self.moving = False
                 else:
                     self.y -= move_speed
                     self.player_direction = 0
                     self.moving = True
-            if pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z):
-                if pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W):
+            if pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
+                if pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP):
                     self.player_direction = 0
                     self.moving = False
-                elif pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A):
+                elif pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
                     self.player_direction = 2
                     self.moving = False
-                elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S):
+                elif pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
                     self.player_direction = 3
                     self.moving = False
                 else:
                     self.y += move_speed
                     self.player_direction = 1
                     self.moving = True
-            if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A):
-                if pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S):
+            if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
+                if pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
                     self.player_direction = 3
                     self.moving = False
-                elif pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W):
+                elif pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP):
                     self.player_direction = 0
                     self.moving = False
-                elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z):
+                elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
                     self.player_direction = 1
                     self.moving = False
                 else:
                     self.x -= move_speed
                     self.player_direction = 2
                     self.moving = True
-            if pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S):
-                if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A):
+            if pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT):
+                if pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT):
                     self.player_direction = 2
                     self.moving = False
-                elif pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W):
+                elif pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP):
                     self.player_direction = 0
                     self.moving = False
-                elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z):
+                elif pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
                     self.player_direction = 1
                     self.moving = False
                 else:

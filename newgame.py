@@ -188,14 +188,14 @@ class MyApp:
             if not(self.pressed_space_checking):
                 # 左パララックススクロール背景のため、左右キーの入力を読み取り、その方向を更新。
                 ## ただし、ほかキー入力が同時にあった場合は移動を行わず立ち止まって向きを変えるキャラクタ操作仕様に合わせるため、該当時はスクロール方向を0にする
-                if (0 < self.player.x <= (300 - self.player.width)) and (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A)):
+                if (0 < self.player.x <= (300 - self.player.width)) and (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)):
                     self.scroll_direction = -1
-                    if (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z)):
+                    if (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)):
                         self.scroll_direction = 0
                         self.player.moving = False
-                elif (0 <= self.player.x < (300 - self.player.width)) and (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S)):
+                elif (0 <= self.player.x < (300 - self.player.width)) and (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)):
                     self.scroll_direction = 1
-                    if (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z)):
+                    if (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_Z) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)):
                         self.scroll_direction = 0
                         self.player.moving = False
                 else:
@@ -789,7 +789,7 @@ class MyApp:
             if len(point3d.points) == 0:
                 self.points3d.remove(point3d)
         ### Vキーを押すと、光の座標群を生成する
-        if pyxel.btnp(pyxel.KEY_V):
+        if pyxel.btnp(pyxel.KEY_V) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_Y):
             self.points3d.append(Point3D(center_x=self.player.x +8, center_y=self.player.y +8, center_z=0, radius=50, num_points=20, speed_low=2, speed_high=4, life_low=50, life_high=100, randini=False, pallete=Random.choice([0, 1, 2]), cacheflg=False, scene=self.gamestate.scene))
         # 光の座標群を更新
         if pyxel.frame_count % 5 == 0:
@@ -856,7 +856,7 @@ class MyApp:
         self.timer_for_psys += 1
         if self.gamestate.scene == C_SCENE_WOOD: ###WOODシーンのみ
             ###Vキーが押されたらパーティクルシステムを起動
-            if pyxel.btnp(pyxel.KEY_V):
+            if pyxel.btnp(pyxel.KEY_V) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_Y):
                 ##パーティクルシステムのインスタンスを生成
                 for _ in range(C_MAX_PARTICLE_SYSTEM_FOR_WOOD): ###必要数を指定
                     self.psys_instances.append(ParticleSystem())
@@ -1196,7 +1196,8 @@ class MyApp:
         # self.wse.draw(self.camera.x)
         self.drawfish(0)
         ###波紋を指定区画内にランダムに描画
-        for i in range(0, 19):
+        # for i in range(0, 12):
+        for i in range(0, 14):
             # カウンタが0になったらリセット
             if self.rain_draw_counter[i] == 0:
                 self.rainAxisColorReset(i)
@@ -2264,7 +2265,7 @@ class MyApp:
                                     door.closeStart()
 
             ###ボタン入力検知（Mキー）
-            if pyxel.btnp(pyxel.KEY_M):
+            if pyxel.btnp(pyxel.KEY_M) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X):
                 print("M key is pressed in PLAY-MODE!")
                 pyxel.play(3,22) #SE再生(Menuオープン)
                 self.gamestate.mode = C_MENU
@@ -2272,34 +2273,34 @@ class MyApp:
 
         if (self.gamestate.mode == C_MENU) and (self.inputdelay_cnt == 0):
             ###ボタン入力検知（Mキー）
-            if pyxel.btnp(pyxel.KEY_M):
+            if pyxel.btnp(pyxel.KEY_M) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X):
                 pyxel.play(3,23) #SE再生(Menuクローズ)
                 print("M key is pressed in MENU-MODE!")
                 self.gamestate.mode = C_PLAY
                 self.inputdelay_cnt = self.inptdelay_C
 
             if not(self.invsys.subwindow_open) and (len(self.invsys.items_and_valuables) > 0):
-                if pyxel.btnp(pyxel.KEY_UP):
+                if pyxel.btnp(pyxel.KEY_UP) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP):
                     self.invsys.selected_index = max(0, self.invsys.selected_index - 1)
                     pyxel.play(3,8) #SE再生(カーソル移動)
-                elif pyxel.btnp(pyxel.KEY_DOWN):
+                elif pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
                     self.invsys.selected_index = min(len(self.invsys.items_and_valuables) - 1, self.invsys.selected_index + 1)
                     pyxel.play(3,8) #SE再生(カーソル移動)
 
             if self.invsys.subwindow_open:
-                if pyxel.btnp(pyxel.KEY_UP):
+                if pyxel.btnp(pyxel.KEY_UP) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP):
                     self.invsys.subwindow_selected_index = max(0, self.invsys.subwindow_selected_index - 1)
                     pyxel.play(3,8) #SE再生(カーソル移動)
-                elif pyxel.btnp(pyxel.KEY_DOWN):
+                elif pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN):
                     self.invsys.subwindow_selected_index = min(1, self.invsys.subwindow_selected_index + 1)
                     pyxel.play(3,8) #SE再生(カーソル移動)
-                elif pyxel.btnp(pyxel.KEY_SPACE):
+                elif pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
                     self.invsys.execute_option()  # 選択肢を実行
                     self.invsys.subwindow_open = False  # サブウィンドウを閉じる
                     self.invsys.subwindow_selected_index = 0
                     print("SUBWINDOW CLOSED!")
             else:
-                if pyxel.btnp(pyxel.KEY_SPACE):
+                if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
                     if (len(self.invsys.items_and_valuables) > 0):
                         self.invsys.subwindow_open = True  # サブウィンドウを開く
                         pyxel.play(3,22) #SE再生(Menuオープン)
