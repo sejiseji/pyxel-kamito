@@ -143,6 +143,8 @@ class Atari(GameObject):
                         ###panningを変更する。
                         self.panning_switch = True
                         return ["最初の戸を開いておいたよ。","","頑張ってね。"]
+                if ((self.scenario_no >= 1) and (self.branch_no == 0)):
+                    return ["やあ。","","","探してる人には会えたかな？","",""]
         if (self.scene_no == C_SCENE_WOOD) :
             if self.obj_no == 4: ### 木の幹１
                 return ["やや小振りな枝に葉が茂っている。",""]

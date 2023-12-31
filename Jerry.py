@@ -76,7 +76,7 @@ class Jerry(GameObject):
         self.door_open_array = door_open_array
 
         ### ◆シーン１　ー　シナリオ１
-        if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 0)):
+        if((self.scene_no >= 0) and (self.scenario_no == 0) and (self.branch_no == 0)):
             return ["クラゲのような生き物だ。","表面が透きとおっていて、触るとツヤツヤしている。"]
         
     # def getReactionText(self):
