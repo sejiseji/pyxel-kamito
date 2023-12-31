@@ -142,8 +142,8 @@ class DotParticle:
         self.speed = speed
         self.lifespan = lifespan
         self.age = 0
-        # self.color = color
-        self.color = Random.choice([pyxel.COLOR_ORANGE, pyxel.COLOR_YELLOW, pyxel.COLOR_RED])
+        self.color = color
+        #self.color = Random.choice([pyxel.COLOR_ORANGE, pyxel.COLOR_YELLOW, pyxel.COLOR_RED])
 
     def update(self, scroll_x=0):
         self.x += self.speed * math.cos(self.angle)
@@ -186,7 +186,7 @@ class CircleParticleLine:
         self.color = color
         self.size = size
     def update(self, scroll_x=0):
-        self.x += self.speed * math.cos(self.angle) - scroll_x
+        self.x += self.speed * math.cos(self.angle)
         self.y -= self.speed * math.sin(self.angle)
         self.age += 1
     def is_alive(self):
@@ -215,7 +215,7 @@ class StarParticle:
         self.points_inner = []
 
     def update(self, scroll_x=0):
-        self.x += self.speed * math.cos(self.angle) - scroll_x
+        self.x += self.speed * math.cos(self.angle)
         self.y -= self.speed * math.sin(self.angle)  # 上向きに移動するため、yを減少させる
         self.age += 1
     def is_alive(self):

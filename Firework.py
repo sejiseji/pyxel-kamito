@@ -1,8 +1,6 @@
-
 import math as Math
 from cmath import exp as Exp
 import random as Random
-
 
 def radial_burst(z, num_particles, expansion_rate):
     return [z + Exp(1j * 2 * Math.pi * i / num_particles) * expansion_rate for i in range(num_particles)]
@@ -127,179 +125,6 @@ def halo_burst(z, expansion_rate, width, num_particles):
         particles.append(z + complex(Math.cos(angle) * distance, Math.sin(angle) * distance))
     return particles
 
-
-
-
-
-
-###双曲線螺旋: 双曲線を用いた螺旋放射。
-def hyperbolic_spiral_burst(z, a, b, num_particles):
-    return [z + complex(a * Math.cos(t) - b * Math.sin(t), a * Math.sin(t) + b * Math.cos(t)) for t in range(num_particles)]
-
-###正n星形: n角形の星形を形成する放射状。
-def star_polygon_burst(z, n, expansion_rate):
-    skip = n // 2  # for simple star patterns
-    return [z * Exp(1j * 2 * Math.pi * i * skip / n) * expansion_rate for i in range(n)]
-
-###アーチメデスの螺旋: アーチメデスの螺旋を用いた放射。
-def star_polygon_burst(z, n, expansion_rate):
-    skip = n // 2  # for simple star patterns
-    return [z * Exp(1j * 2 * Math.pi * i * skip / n) * expansion_rate for i in range(n)]
-
-###モビウス変換: モビウス変換を用いた放射。
-def mobius_transform(z, a, b, c, d):
-    return (a * z + b) / (c * z + d)
-
-###ベジエ曲線放射: ベジエ曲線に沿った放射。
-from cmath import exp, phase
-def bezier_curve_burst(z, control_point, t, expansion_rate, num_particles):
-    b = (1 - t) * z + t * control_point
-    return [z + exp(1j * phase(b)) * expansion_rate for _ in range(num_particles)]
-
-
-###カンターセット放射: カンターセットを用いた放射。
-def cantor_set_burst(z, expansion_rate, num_particles, depth=0):
-    if depth >= num_particles:
-        return []
-    cantor_distance = expansion_rate / (3 ** (depth + 1))
-    left = z - complex(cantor_distance, 0)
-    right = z + complex(cantor_distance, 0)
-    return [left, right] + cantor_set_burst(left, expansion_rate, num_particles, depth + 1) + cantor_set_burst(right, expansion_rate, num_particles, depth + 1)
-
-
-###Sierpińskiの三角形: Sierpińskiの三角形に基づく放射。
-def sierpinski_triangle_burst(z, expansion_rate, depth):
-    if depth == 0:
-        return [z]
-    top = z + complex(0, expansion_rate)
-    left = z + complex(-expansion_rate * Math.cos(Math.pi/3), -expansion_rate * Math.sin(Math.pi/3))
-    right = z + complex(expansion_rate * Math.cos(Math.pi/3), -expansion_rate * Math.sin(Math.pi/3))
-    return sierpinski_triangle_burst(top, expansion_rate / 2, depth - 1) + \
-           sierpinski_triangle_burst(left, expansion_rate / 2, depth - 1) + \
-           sierpinski_triangle_burst(right, expansion_rate / 2, depth - 1)
-
-###楕円放射: 楕円軌道に沿った放射。
-def elliptical_burst(z, a, b, num_particles):
-    return [z + complex(a * Math.cos(2 * Math.pi * i / num_particles), b * Math.sin(2 * Math.pi * i / num_particles)) for i in range(num_particles)]
-
-###ユークリッドの互除法: ユークリッドの互除法に基づく放射。
-def euclid_burst(z, a, b, expansion_rate):
-    angles = []
-    while b != 0:
-        angles.append(a)
-        a, b = b, a % b
-    # anglesリストの値を放射の角度として用いる
-    particles = [z + Exp(1j * 2 * Math.pi * angle / sum(angles)) * expansion_rate for angle in angles]    
-    return particles
-
-###ルーカス数列: ルーカス数列に基づき相対距離を計算し放射。
-def lucas_firework(z, n):
-    lucas_numbers = [2, 1]
-    for _ in range(2, n):
-        lucas_numbers.append(lucas_numbers[-1] + lucas_numbers[-2])
-    particles = []
-    for l in lucas_numbers:
-        angle = 2 * Math.pi * l / max(lucas_numbers)
-        particles.append(z * Exp(1j * angle))
-    return particles
-
-###パスカルの三角形: パスカルの三角形に基づく放射。
-def pascal_firework(z, layers):
-    triangle = [[1]]
-    particles = [z]
-    for i in range(1, layers):
-        row = [sum(pair) for pair in zip([0] + triangle[-1], triangle[-1] + [0])]
-        triangle.append(row)
-        for j in row:
-            angle = 2 * Math.pi * j / sum(row)
-            particles.append(z * Exp(1j * angle))
-    return particles
-
-###ハーシャッド数の約数の数に基づく放射のブロックを生成
-def harshad_firework(z, n):
-    divisors = [i for i in range(1, n + 1) if n % i == 0]
-    particles = []
-    for divisor in divisors:
-        angle = 2 * Math.pi * divisor / n
-        particles.append(z * Exp(1j * angle))
-    return particles
-
-###モーザーズ数に基づいて円周上に均等にパーティクルを放出
-def moser_firework(z, n):
-    particles = []
-    for i in range(n):
-        angle = 2 * Math.pi * i / n
-        particles.append(z * Exp(1j * angle))
-    return particles
-
-###ハッピー数: ハッピー数に基づく放射。放射角度をハッピー数にする。
-def is_happy(num):
-    seen = set()
-    while num != 1 and num not in seen:
-        seen.add(num)
-        num = sum(int(i)**2 for i in str(num))
-    return num == 1
-def happy_firework(z, n):
-    happy_numbers = [i for i in range(1, n+1) if is_happy(i)]
-    particles = []
-    for h in happy_numbers:
-        angle = 2 * Math.pi * h / n
-        particles.append(z * Exp(1j * angle))
-    return particles
-
-###魔法陣定数:nxnのグリッドに基づく放射
-def magic_square_firework(z, n):
-    particles = []
-    for i in range(n):
-        for j in range(n):
-            offset = complex(i, j) - complex(n/2, n/2)
-            particles.append(z + offset)
-    return particles
-
-
-###四角形数に基づく相対距離
-def square_number_firework(z, n):
-    square_numbers = [i**2 for i in range(1, int(n**0.5)+1)]
-    particles = []
-    for s in square_numbers:
-        angle = 2 * Math.pi * s / max(square_numbers)
-        particles.append(z * Exp(1j * angle))
-    return particles
-
-###ペル数列:ペル数に基づくスパイラル放射
-def pell_firework(z, n):
-    pell_numbers = [0, 1]
-    for i in range(2, n):
-        pell_numbers.append(2 * pell_numbers[-1] + pell_numbers[-2])
-    particles = []
-    for p in pell_numbers:
-        angle = 2 * Math.pi * p / max(pell_numbers)
-        particles.append(z * Exp(1j * angle))
-    return particles
-
-###パドヴァン数列：3つ前のパーティクルの位置に基づく放射
-def padovan_firework(z, n):
-    padovan = [1, 1, 1]
-    for _ in range(3, n):
-        padovan.append(padovan[-2] + padovan[-3])
-    particles = []
-    for p in padovan:
-        angle = 2 * Math.pi * p / max(padovan)
-        particles.append(z * Exp(1j * angle))
-    return particles
-
-###シルヴェスター数列: 各シルヴェスター数の位置に基づく放射。
-def sylvester_firework(z, n):
-    sylvester = [2]
-    for _ in range(1, n):
-        sylvester.append(sylvester[-1] * (sylvester[-1] - 1) + 1)
-    particles = []
-    for s in sylvester:
-        angle = 2 * Math.pi * s / max(sylvester)
-        particles.append(z * Exp(1j * angle))
-    return particles
-
-
 ###球面放射するパーティクルを複素平面上に射影する花火関数（必ず放射の中心座標を(x,y,0)平面上に生成）、framecountに応じて回転する
 def radiating_sphere_projection_burst(z, r, num_particles, expansion_rate, life):
     particles = []
@@ -323,24 +148,132 @@ def radiating_sphere_projection_burst(z, r, num_particles, expansion_rate, life)
         # 複素数として追加
         particles.append(complex(x_final, y_final))
     return particles
-# ###球面放射するパーティクルを複素平面上に射影する花火関数（必ず放射の中心座標を(x,y,0)平面上に生成）
-# def radiating_sphere_projection_burst(z, r, num_particles, expansion_rate):
-#     particles = []
-#     for i in range(num_particles):
-#         theta = Math.acos(1 - 2 * i / num_particles)  # 緯度を均等に分布
-#         phi = Math.sqrt(num_particles * Math.pi) * theta  # 経度を均等に分布
-#         # 放射による拡大を考慮して距離を調整
-#         dist = r + expansion_rate
-#         # 放射を考慮した球面上の座標を計算
-#         x = dist * Math.sin(theta) * Math.cos(phi) + z.real  # 放射中心のx座標を足す
-#         y = dist * Math.sin(theta) * Math.sin(phi) + z.imag  # 放射中心のy座標を足す
-#         # 複素数として追加
-#         particles.append(complex(x, y))
-#     return particles
+
+###双曲線螺旋: 双曲線を用いた螺旋放射。
+def hyperbolic_spiral_burst(z, a, b, num_particles):
+    return [z + complex(a * Math.cos(t) - b * Math.sin(t), a * Math.sin(t) + b * Math.cos(t)) for t in range(num_particles)]
+
+###ベジエ曲線放射: ベジエ曲線に沿った放射。
+from cmath import exp, phase
+def bezier_curve_burst(z, control_point, t, expansion_rate, num_particles):
+    b = (1 - t) * z + t * control_point
+    # return [z + exp(1j * phase(b)) * expansion_rate for _ in range(num_particles)]
+    return [z * expansion_rate for _ in range(num_particles)]
+
+###Sierpińskiの三角形: Sierpińskiの三角形に基づく放射。
+def rotate_point(point, angle, center):
+    return exp(1j * angle) * (point - center) + center
+def sierpinski_triangle_burst(z, expansion_rate, depth, angle=None):
+    if angle is None:
+        angle = Random.uniform(0, 2 * Math.pi)  # ランダムな回転角を生成
+    if depth == 0:
+        return [rotate_point(z, angle, z)]
+    top = z + complex(0, expansion_rate)
+    left = z + complex(-expansion_rate * Math.cos(Math.pi/6), -expansion_rate * Math.sin(Math.pi/6))
+    right = z + complex(expansion_rate * Math.cos(Math.pi/6), -expansion_rate * Math.sin(Math.pi/6))
+    return sierpinski_triangle_burst(rotate_point(top, angle, z), expansion_rate / 2, depth - 1, angle) + \
+           sierpinski_triangle_burst(rotate_point(left, angle, z), expansion_rate / 2, depth - 1, angle) + \
+           sierpinski_triangle_burst(rotate_point(right, angle, z), expansion_rate / 2, depth - 1, angle)
+
+###楕円放射: 楕円軌道に沿った放射。
+def elliptical_burst(z, a, b, num_particles):
+    angle = Random.uniform(0, 2 * Math.pi)  # ランダムな回転角を生成
+    return [rotate_point(z + complex(a * Math.cos(2 * Math.pi * i / num_particles), b * Math.sin(2 * Math.pi * i / num_particles)),angle,z) for i in range(num_particles)]
+
+###ルーカス数列: ルーカス数列に基づき相対距離を計算し放射。
+def lucas_firework(z, n):
+    lucas_numbers = [2, 1]
+    for _ in range(2, n):
+        lucas_numbers.append(lucas_numbers[-1] + lucas_numbers[-2])
+    particles = []
+    for l in lucas_numbers:
+        angle = 8 * Math.pi * l / max(lucas_numbers) * 15
+        particles.append(z * Exp(1j * angle))
+    return particles
+
+###パスカルの三角形: パスカルの三角形に基づく放射。
+def pascal_firework(z, layers):
+    triangle = [[1]]
+    particles = [z]
+    for i in range(1, layers):
+        row = [sum(pair) for pair in zip([0] + triangle[-1], triangle[-1] + [0])]
+        triangle.append(row)
+        for j in row:
+            angle = 2 * Math.pi * j / sum(row)
+            particles.append(z * Exp(1j * angle))
+    return particles
+
+###ハーシャッド数の約数の数に基づく放射のブロックを生成
+def harshad_firework(z, r, n):
+    divisors = [i for i in range(1, n + 1) if n % i == 0]
+    particles = []
+    for divisor in divisors:
+        angle = 2 * Math.pi * divisor / n
+        # オフセットを計算
+        offset = Exp(1j * angle)
+        particles.append((r * z + offset) * Exp(1j * angle))
+    return particles
+
+###モーザーズ数に基づいて円周上に均等にパーティクルを放出
+def moser_firework(z, r, n):
+    particles = []
+    for i in range(n):
+        angle = 2 * Math.pi * i / n
+        # 半径 r を考慮したオフセットを計算
+        offset = r * Exp(1j * angle)
+        particles.append((z + offset))
+    return particles
+
+###ハッピー数: ハッピー数に基づく放射。放射角度をハッピー数にする。
+def is_happy(num):
+    seen = set()
+    while num != 1 and num not in seen:
+        seen.add(num)
+        num = sum(int(i)**2 for i in str(num))
+    return num == 1
+def happy_firework(z, r, n):
+    happy_numbers = [i for i in range(1, n+1) if is_happy(i)]
+    particles = []
+    for h in happy_numbers:
+        angle = 2 * Math.pi * h / n
+        # 半径 r を考慮したオフセットを計算
+        offset = r * Exp(1j * angle)
+        particles.append(z + offset)
+    return particles
+
+###魔法陣定数:nxnのグリッドに基づく放射
+def magic_square_firework(z, r, n):
+    particles = []
+    angle = Random.uniform(0, 2 * Math.pi)  # ランダムな回転角を生成
+    for i in range(n):
+        for j in range(n):
+            offset = r * (complex(i, j) - complex(n/2, n/2)) * Exp(1j * angle)
+            particles.append(z + offset)
+    return particles
+
+###ペル数列:ペル数に基づくスパイラル放射
+def pell_firework(z, n):
+    pell_numbers = [0, 1]
+    for i in range(2, n):
+        pell_numbers.append(2 * pell_numbers[-1] + pell_numbers[-2])
+    particles = []
+    for p in pell_numbers:
+        angle = 2 * Math.pi * p / max(pell_numbers)
+        particles.append(z * Exp(1j * angle))
+    return particles
+
+###シルヴェスター数列: 各シルヴェスター数の位置に基づく放射。
+def sylvester_firework(z, n):
+    sylvester = [2]
+    for _ in range(1, n):
+        sylvester.append(sylvester[-1] * (sylvester[-1] - 1) + 1)
+    particles = []
+    for s in sylvester:
+        angle = 2 * Math.pi * s / max(sylvester)
+        particles.append(z * Exp(1j * angle))
+    return particles
+
 ##-----------
-
-
-
 
 class Firework:
     def __init__(self, x, y):
@@ -356,24 +289,20 @@ class Firework:
         self.rotation_angle = 0  # 花火の回転角度　。。。３次元球面花火用
         self.multi_color_num = 1
 
-
-
         # すべての花火関数をリストに追加
+        # self.burst_funcs = [radial_burst, spiral_burst, triangular_burst, random_burst, heart_shape, star_burst, 
+        #                     spiral_recursive_burst, fibonacci_burst, fibonacci_burst_multiple, ring_burst, ring_burst2, 
+        #                     multi_ring_burst, halo_burst, radiating_sphere_projection_burst, hyperbolic_spiral_burst, sierpinski_triangle_burst, elliptical_burst,
+        #                     lucas_firework, pascal_firework, harshad_firework, moser_firework, happy_firework,
+        #                     magic_square_firework, pell_firework, sylvester_firework]
         self.burst_funcs = [radial_burst, spiral_burst, triangular_burst, random_burst, heart_shape, star_burst, 
                             spiral_recursive_burst, fibonacci_burst, fibonacci_burst_multiple, ring_burst, ring_burst2, 
-                            multi_ring_burst, halo_burst, radiating_sphere_projection_burst, hyperbolic_spiral_burst, star_polygon_burst, 
-                            mobius_transform, bezier_curve_burst, cantor_set_burst, sierpinski_triangle_burst, elliptical_burst,
-                            euclid_burst, lucas_firework, pascal_firework, harshad_firework, moser_firework, happy_firework,
-                            magic_square_firework, square_number_firework, pell_firework, padovan_firework, sylvester_firework]
+                            multi_ring_burst, halo_burst, radiating_sphere_projection_burst, hyperbolic_spiral_burst, sierpinski_triangle_burst, elliptical_burst,
+                            moser_firework, magic_square_firework]
+        
         self.burst_funcs_maxindex = len(self.burst_funcs) - 1
-        # self.burst_func = Random.choice(self.burst_funcs)
-        # self.burst_func = self.burst_funcs[2]
-        # self.burst_func = self.burst_funcs[self.burst_funcs_maxindex]
-        # self.burst_func = self.burst_funcs[13] # 13: radiating_sphere_projection_burstまで調整完了済みです. 20230905
-        self.burst_func = self.burst_funcs[Random.randrange(0,14)]
-
-        # self.update()
-
+        # self.burst_func = self.burst_funcs[17] 垂れる花火をリストから除外。#20231231
+        self.burst_func = self.burst_funcs[Random.randrange(0,self.burst_funcs_maxindex)]
 
     def update(self):
         if self.life > 0:
@@ -381,47 +310,67 @@ class Firework:
                 self.y -= self.vy  # 上昇
                 self.draw_y = self.y                
             elif self.active:
-                if self.burst_func   == radial_burst: ###調整済
+                if self.burst_func   == radial_burst: ###No.00調整済
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 100, 25)
-                elif self.burst_func == spiral_burst: ###調整済
+                elif self.burst_func == spiral_burst: ###No.01調整済
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 100, 20, Random.randrange(1, 4))
-                elif self.burst_func == triangular_burst: ###調整済 
+                elif self.burst_func == triangular_burst: ###No.02調整済 
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.uniform(10, 20), 100, Random.randrange(2, 5))
-                elif self.burst_func == random_burst: ###調整済
+                elif self.burst_func == random_burst: ###No.03調整済
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 60, 100)
-                elif self.burst_func == heart_shape: ###調整済
+                elif self.burst_func == heart_shape: ###No.04調整済 ハート状放射
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 2)
-                elif self.burst_func == star_burst: ###調整済
+                elif self.burst_func == star_burst: ###No.05調整済　星型放射
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.randrange(15, 30))
-                elif self.burst_func == spiral_recursive_burst: ###調整済
+                elif self.burst_func == spiral_recursive_burst: ###No.06調整済
                     rotation_offset = Random.uniform(-0.5, 0.5)
                     branch_count = Random.choice([5, 6, 8, 10])
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 2, 12, 8.0, rotation_offset, branch_count)
-                elif self.burst_func == fibonacci_burst: ###調整済
+                elif self.burst_func == fibonacci_burst: ###No.07調整済
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 42, 100)
-                elif self.burst_func == fibonacci_burst_multiple: ###調整済
+                elif self.burst_func == fibonacci_burst_multiple: ###No.08調整済
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), [0.25, 0.375, 0.5], 100, self.life)
-                elif self.burst_func == ring_burst: ###調整済
+                elif self.burst_func == ring_burst: ###No.09調整済
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.choice([8, 12, 15]), 100, 5)
-                elif self.burst_func == ring_burst2: ###調整済
+                elif self.burst_func == ring_burst2: ###No.10調整済
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.choice([8, 12, 15]), 100, 5)
-                elif self.burst_func == multi_ring_burst: ###調整済
+                elif self.burst_func == multi_ring_burst: ###No.11調整済
                     index = Random.randrange(0, 3)
                     radius = [4, 6, 8]
                     particle_num = [18, 20, 26]
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), radius[index], 4, particle_num[index])
-                elif self.burst_func == halo_burst: 
+                elif self.burst_func == halo_burst:  ###No.12調整済 ハロー放射三次元球面
                     index = Random.randrange(0, 3)
                     radius = [15, 20, 30]
                     particle_num = [40, 60, 80]
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 2, radius[index], particle_num[index])
-
-                elif self.burst_func == radiating_sphere_projection_burst:
+                elif self.burst_func == radiating_sphere_projection_burst: ###No.13調整済 三次元球面花火
                     index = Random.randrange(0, 3)
                     radius = [40, 50, 65]
                     particle_num = [100, 150, 250]
                     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), radius[index], particle_num[index], 1.2, self.life)
-
+                elif self.burst_func == hyperbolic_spiral_burst: ###No.14調整済 円状放射
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), Random.choice([8, 12, 15]), 30, 20)
+                elif self.burst_func == sierpinski_triangle_burst: ###No.15調整済 シェルピンスキーの三角形
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 20, 4)
+                elif self.burst_func == elliptical_burst: ###No.16 調整済 楕円状放射
+                    major_axis = Random.randrange(35, 45)
+                    minor_axis = Random.randrange(20, 30)
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), major_axis, minor_axis, 40)
+                # elif self.burst_func == lucas_firework: ###No.17調整済.　左下へと流れる花火
+                #     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 200)
+                # elif self.burst_func == pascal_firework: ###No.18調整済。　左下へと流れる花火
+                #     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 10)
+                # elif self.burst_func == harshad_firework: ###No.19調整済。　左下へと流れる花火
+                #     self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 0.8, 100)
+                elif self.burst_func == moser_firework: ###No.20調整済。　円状放射
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 45, 36)
+                elif self.burst_func == happy_firework: ###No.21調整済。
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 30, 50)
+                elif self.burst_func == magic_square_firework: ###No.22調整済。
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 6, 8)
+                elif self.burst_func == pell_firework: ###No.23調整済。
+                    self.burst = self.burst_func(complex(self.draw_x, self.draw_y), 100)
                 # ... 同様に、他の関数も条件分岐して引数を設定 ...
                 else:
                     # 未対応の関数についてはエラーが発生しないようにデフォルトの動作を設定
@@ -460,4 +409,3 @@ class Firework:
         rotated_point = complex(rotated_real, rotated_imag)
         # 回転した点を元の中心に戻す
         return complex(rotated_point.real + center.real, rotated_point.imag + center.imag)
-

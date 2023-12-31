@@ -63,7 +63,7 @@ class Character(GameObject):
         self.env_text_displaying = False
         self.flg_reaction = False
         self.able_moving_top = C_MIN_MOVEABLE_Y
-        self.hp = 10
+        self.hp = 8
         self.max_hp = 10
         self.mp = 5
         self.max_mp = 5
@@ -367,18 +367,18 @@ class Character(GameObject):
         self.responce_no = response_no ### 返答結果番号
         self.door_open_array = door_open_array ### ドア開閉状況
 
-        ### ◆シーン１　ー　シナリオ１
-        if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 0)):
-            ### プレイヤー : WOLF →　キャラ　：　GIRLのときの【後者】の発話
-            if((self.conversation_with == C_CHARA_WOLF) and (self.character_no == C_CHARA_GIRL)):
+        ### プレイヤー : WOLF →　キャラ　：　GIRLのときの【後者】の発話
+        if((self.conversation_with == C_CHARA_WOLF) and (self.character_no == C_CHARA_GIRL)):
+            ### ◆シーン１　ー　シナリオ１
+            if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 0)):
                 if(self.rtn_txt_no == 0):
                     self.rtn_txt_no += 1
                     self.cancelFlgWaitingResponce()
-                    return ["あ。やっと起きた。"]
+                    return ["あ。もう…やっと起きた。"]
                 if(self.rtn_txt_no == 1):
                     self.rtn_txt_no += 1
                     self.setFlgWaitingResponce() ### 1回目返事待機
-                    return ["目覚める前のこと、覚えてる？"]
+                    return ["目覚める前のことさ、覚えてる？"]
                 if(self.rtn_txt_no == 2):
                     self.rtn_txt_no += 1
                     self.cancelFlgWaitingResponce()
@@ -386,9 +386,9 @@ class Character(GameObject):
                 if(self.rtn_txt_no == 3):
                     self.cancelFlgWaitingResponce()
                     return ["まずは周囲を調べましょ。"]
-        if((self.scene_no == 1) and (self.scenario_no == 0) and (self.branch_no == 0)):
-            ### プレイヤー : WOLF →　キャラ　：　MICHIのときの【後者】の発話
-            if((self.conversation_with == C_CHARA_WOLF) and (self.character_no == C_CHARA_MICHI)):
+        ### プレイヤー : WOLF →　キャラ　：　MICHIのときの【後者】の発話
+        if((self.conversation_with == C_CHARA_WOLF) and (self.character_no == C_CHARA_MICHI)):
+            if((self.scene_no == 1) and (self.scenario_no == 0) and (self.branch_no == 0)):
                 if(self.rtn_txt_no == 0):
                     self.rtn_txt_no += 1
                     self.cancelFlgWaitingResponce()
@@ -400,10 +400,11 @@ class Character(GameObject):
                 if(self.rtn_txt_no == 2):
                     self.cancelFlgWaitingResponce()
                     return ["戸は奥にあるよ。","さっき出てきた。触ろうとしたら透けちゃうんだよね。","わたしは触れないけど、あなたなら触れるかも。"]
-        if((self.scene_no == 6) and (self.scenario_no == 0) and (self.branch_no == 0)):
-            ### プレイヤー : WOLF →　キャラ　：　LIKIのときの【後者】の発話
-            if((self.conversation_with == C_CHARA_WOLF) and (self.character_no == C_CHARA_LIKI)):
+        ### プレイヤー : WOLF →　キャラ　：　LIKIのときの【後者】の発話
+        if((self.conversation_with == C_CHARA_WOLF) and (self.character_no == C_CHARA_LIKI)):
+            if((self.scene_no == 6) and (self.scenario_no == 0) and (self.branch_no == 0)):
                 if(self.rtn_txt_no == 0):
+                    self.rtn_txt_no += 1
                     self.cancelFlgWaitingResponce()
                     return ["ん？おめーどっから来た？"]
         ###会話によってシーン・シナリオ・ブランチに変化を与えたいことがある。ゲーム本体側でこれらの値を取得してゲーム本体側へ上書き利用する。

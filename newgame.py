@@ -81,6 +81,7 @@ C_SCENE_SOIL  = 6
 C_SCENE_SUN   = 7
 C_SCENE_END   = 8
 C_SCENE_MENU  = 9
+C_SCENE_CHOICE = 10
 
 ###パーティクルシステムで同時使用する最大数
 C_MAX_PARTICLE_SYSTEM_FOR_WOOD = 4
@@ -112,10 +113,11 @@ class GameState:
         self.scene = 0
         self.scenario = list()
         self.scenario.append([0,0,0])
+        self.scenetimer = 0
         ###ナンバリングしたDoorオブジェクトの開放状態を管理する配列
         ###順にHOMEの戸、月の戸、火の戸、水の戸、木の戸、金の戸、土の戸、太陽の戸、エンディングの戸
-        # self.door_open_array = [False, False, False, False, False, False, False, False, False]
-        self.door_open_array = [True, True, True, True, True, True, True, True, True]
+        self.door_open_array = [False, False, False, False, False, False, False, False, False]
+        # self.door_open_array = [True, True, True, True, True, True, True, True, True]
 
         self.door_open_array_bf = self.door_open_array.copy()
 
@@ -141,6 +143,7 @@ class MyApp:
         self.gamestate = GameState()
         self.gamestate.mode = C_PLAY ##モードをPLAYに設定
         self.gamestate.scene = C_SCENE_HOME ##シーンをホームに設定
+        self.gamestate.scenetimer = 0
 
         ###変数宣言
         self.hensuSengen()
@@ -174,6 +177,7 @@ class MyApp:
         if (self.gamestate.mode == C_PLAY):
             ### gamestate更新
             self.gamestate.scenario[0][0] = self.gamestate.scene
+            self.gamestate.scenetimer += 1
             ###拡張機能のupdate
             self.ext.update_angle()
             ###パーティクルシステムインスタンスのupdate
@@ -257,12 +261,12 @@ class MyApp:
             ###シーンごとの処理
             if (self.gamestate.scene == C_SCENE_HOME):
                 self.updateHomeScene()
-            if (self.gamestate.scene == C_SCENE_MOON):
+            elif (self.gamestate.scene == C_SCENE_MOON):
                 self.updateMoonScene()
             elif (self.gamestate.scene == C_SCENE_FIRE):
                 self.updateFireScene()
-            # elif (self.gamestate.scene == C_SCENE_WATER):
-            #     self.updateWaterScene()
+            elif (self.gamestate.scene == C_SCENE_WATER):
+                self.updateWaterScene()
             elif (self.gamestate.scene == C_SCENE_WOOD):
                 if not(self.player.able_moving_top == 100):
                     self.player.able_moving_top = 100
@@ -546,6 +550,44 @@ class MyApp:
         self.water_trees.append(WaterTree(410,8))
         self.water_trees.append(WaterTree(430,9))
         self.water_trees.append(WaterTree(530,10))
+        ###パーティクルシステムを生成
+        for _ in range(0,3):
+            self.psys_instances.append(ParticleSystem())
+        ###パーティクルシステムを初期化
+        colors = [7,7,7]
+        self.psys_instances[0].activate(
+            active_duration=999999999, spawn_interval=17, total_spawns=999999999,
+            x=80, y=260, #particle放射の中心座標
+            width=600, height=500, ##正方エリア内放射パターンで使用されるエリアサイズ指定変数
+            num_particles=14, ##一度に放射するパーティクルの数
+            pattern=0, ##放射particle形状の指定(0:Dot型)
+            size=6, ##Dot型以外で使用されるパーティクルサイズ
+            color=colors[0], #particleの色
+            speed_range=1,
+            direction=12
+        )
+        self.psys_instances[1].activate(
+            active_duration=999999999, spawn_interval=10, total_spawns=999999999,
+            x=150, y=260, #particle放射の中心座標
+            width=600, height=500, ##正方エリア内放射パターンで使用されるエリアサイズ指定変数
+            num_particles=12, ##一度に放射するパーティクルの数
+            pattern=0, ##放射particle形状の指定(0:Dot型)
+            size=1, ##Dot型以外で使用されるパーティクルサイズ
+            color=colors[1], #particleの色
+            speed_range=1,
+            direction=12
+        )
+        self.psys_instances[2].activate(
+            active_duration=999999999, spawn_interval=16, total_spawns=999999999,
+            x=220, y=260, #particle放射の中心座標
+            width=600, height=500, ##正方エリア内放射パターンで使用されるエリアサイズ指定変数
+            num_particles=15, ##一度に放射するパーティクルの数
+            pattern=0, ##放射particle形状の指定(0:Dot型)
+            size=4, ##Dot型以外で使用されるパーティクルサイズ
+            color=colors[2], #particleの色
+            speed_range=1,
+            direction=12
+        )
 
 
     def generateUniqueObjectsInWood(self):
@@ -587,6 +629,44 @@ class MyApp:
             flower = Stem(x, 240, height)
             flower.update_tip() # 花の先端の座標を更新
             self.flowers.append(flower)
+        ###パーティクルシステムを生成
+        for _ in range(0,3):
+            self.psys_instances.append(ParticleSystem())
+        ###パーティクルシステムを初期化
+        colors = [14,11,10]
+        self.psys_instances[0].activate(
+            active_duration=999999999, spawn_interval=20, total_spawns=999999999,
+            x=-40, y=110, #particle放射の中心座標
+            width=600, height=300, ##正方エリア内放射パターンで使用されるエリアサイズ指定変数
+            num_particles=8, ##一度に放射するパーティクルの数
+            pattern=1, ##放射particle形状の指定(0:Dot型)
+            size=1, ##Dot型以外で使用されるパーティクルサイズ
+            color=colors[0], #particleの色
+            speed_range=1,
+            direction=3
+        )
+        self.psys_instances[1].activate(
+            active_duration=999999999, spawn_interval=18, total_spawns=999999999,
+            x=-40, y=70, #particle放射の中心座標
+            width=600, height=300, ##正方エリア内放射パターンで使用されるエリアサイズ指定変数
+            num_particles=8, ##一度に放射するパーティクルの数
+            pattern=1, ##放射particle形状の指定(0:Dot型)
+            size=1, ##Dot型以外で使用されるパーティクルサイズ
+            color=colors[1], #particleの色
+            speed_range=1,
+            direction=3
+        )
+        self.psys_instances[2].activate(
+            active_duration=999999999, spawn_interval=18, total_spawns=999999999,
+            x=-40, y=90, #particle放射の中心座標
+            width=600, height=300, ##正方エリア内放射パターンで使用されるエリアサイズ指定変数
+            num_particles=15, ##一度に放射するパーティクルの数
+            pattern=0, ##放射particle形状の指定(0:Dot型)
+            size=1, ##Dot型以外で使用されるパーティクルサイズ
+            color=colors[2], #particleの色
+            speed_range=1,
+            direction=3
+        )
             
     def generateUniqueObjectsInGold(self):
         self.visualizer  = EchoChamberVisualizer(x_center=65,  y_center=200, r=30, treeangle=30, max_depth=10, polygon_sides=6, external=False)
@@ -666,6 +746,8 @@ class MyApp:
             if (self.gamestate.scene == C_SCENE_FIRE):
                 self.points3d.clear()
                 self.lantans.clear()
+                self.psys_instances.clear()
+            if (self.gamestate.scene == C_SCENE_WATER):
                 self.psys_instances.clear()
             if (self.gamestate.scene == C_SCENE_WOOD):
                 self.trees.clear()
@@ -797,8 +879,11 @@ class MyApp:
                 point3d.update()
         
     def updateWaterScene(self):
-        ###WaterSurfaceEffectインスタンスのupdate
-        self.wse.update()
+        ##self.psys_instancesが空でなければ、updateを実行する
+        if len(self.psys_instances) > 0:
+            for psys in self.psys_instances:
+                psys.update_particles(self.camera.x, 1)
+
 
     def updateWoodScene(self):
         ###木オブジェクトのplayerに対しての前後状態をupdate
@@ -821,8 +906,10 @@ class MyApp:
         if pyxel.frame_count % 10 == 0:
             for flower in self.flowers:
                 flower.update_tip(0 +self.camera.x,300 +self.camera.x)
-        ###particlesystemのupdate
-        self.updateParticleSystems()
+        ##self.psys_instancesが空でなければ、updateを実行する
+        if len(self.psys_instances) > 0:
+            for psys in self.psys_instances:
+                psys.update_particles(self.camera.x, 1)
     
     def updateGoldScene(self):
         # オブジェクトのupdateメソッドを呼び出す
@@ -841,8 +928,12 @@ class MyApp:
             self.camera.apply(segment)
         ###echo chamberのupdate
         if len(self.segments) > 0:
+            if pyxel.frame_count % 15 == 0:
+                for segment in self.segments:
+                    segment.angle_offset += 15
             for segment in self.segments:
                 segment.update()
+            
 
     def updateSunScene(self):
         ###パーティクルシステムのupdate
@@ -1111,6 +1202,7 @@ class MyApp:
         pyxel.blt(278 - self.camera.x, 8 * 14, 2, 16 / 2 * 9, 16 *  9, 16 / 2, 16 * 2, 3)
 
 
+
     def drawMoonBG(self):
         pyxel.cls(0) #DARK BLUE
         ###月の描画
@@ -1174,18 +1266,20 @@ class MyApp:
         ###Lantanの描画
         for lantan in self.lantans:
             lantan.draw()
-        ###橋（ガラス）の反射を斜め線で表現
-        for i in range(0, 600, 4):
-            if i % 2 == 0:
-                pyxel.line(i -self.camera.x, 130, 3*i -420 -self.camera.x, 230, 13)
-        ###橋をlineで描画
-        pyxel.line(0, 130, 600, 130,  7) #橋の上の線
-        pyxel.line(0, 131, 600, 131, 13) #橋の上の線
-        #横線
-        for i in range(132, 239):
-            if i % 3 == 0:
-                pyxel.line(0, i, 600, i, 13)
-        pyxel.line(0, 230, 600, 230,  7) #橋の下の線
+        # ###橋（ガラス）の反射を斜め線で表現
+        # for i in range(0, 600, 4):
+        #     if i % 2 == 0:
+        #         pyxel.line(i -self.camera.x, 130, 3*i -420 -self.camera.x, 230, 13)
+        # ###橋をlineで描画
+        # pyxel.line(0, 130, 600, 130,  7) #橋の上の線
+        # pyxel.line(0, 131, 600, 131, 13) #橋の上の線
+        # #横線
+        # for i in range(132, 239):
+        #     if i % 3 == 0:
+        #         pyxel.line(0, i, 600, i, 13)
+        # pyxel.line(0, 230, 600, 230,  7) #橋の下の線
+        ###
+        pyxel.blt(150 - self.camera.x, 100, 1, 96, 160 + 16*(pyxel.frame_count//8 % 4), 16, 16,0)
 
 
     def drawWaterBG(self):
@@ -1197,7 +1291,7 @@ class MyApp:
         self.drawfish(0)
         ###波紋を指定区画内にランダムに描画
         # for i in range(0, 12):
-        for i in range(0, 14):
+        for i in range(0, 10):
             # カウンタが0になったらリセット
             if self.rain_draw_counter[i] == 0:
                 self.rainAxisColorReset(i)
@@ -1320,6 +1414,9 @@ class MyApp:
             watertree.draw(self.camera.x)
         ###fishの移動
         self.drawfish(1)
+        ###particleの描画
+        if len(self.psys_instances) > 0:
+            self.drawParticles()
 
     def drawfrog(self,direction=1):
         ###カエル
@@ -1410,7 +1507,8 @@ class MyApp:
         pyxel.blt(40 -self.camera.x,100,1,144,0,16,40,0)
         pyxel.blt(570 -self.camera.x,100,1,144,0,16,40,0)
         ###particleの描画
-        self.drawParticles()
+        if len(self.psys_instances) > 0:
+            self.drawParticles()
 
     
     def drawTreesBG(self):
@@ -1578,7 +1676,7 @@ class MyApp:
                 pyxel.blt(x + k*2,y + 16 * j,2,72 + sand_i * 2,232,2,16,0)
 
     def drawSoilBG(self):
-        pyxel.cls(4)
+        pyxel.cls(13)
 
         ###キャラクターの描画
         # pyxel.blt(100 - self.camera.x,100,1,16,48,16,48,3)
@@ -1924,7 +2022,51 @@ class MyApp:
                 ###
                 for i in range(0, 60):
                     pyxel.blt( i*20 - self.camera.x,184,2,192,104,16,48,0)
+            
+            ###scene,scenetimerに応じた描画
+            if 0 <= self.gamestate.scenetimer < 110:
+                upper_line_y = 127
+                lower_line_y = 152
+                if 0 <= self.gamestate.scenetimer < 30:
+                    ###画面中央に黒い帯を表示
+                    pyxel.rect(0, 125, 300, 30, 0)
+                    ###白のlineを描画
+                    pyxel.line(0, upper_line_y, 300, upper_line_y, 7)
+                    pyxel.line(0, lower_line_y, 300, lower_line_y, 7)
 
+                elif 30 <= self.gamestate.scenetimer < 60:
+                    if 30 <= self.gamestate.scenetimer < 45:
+                        ###画面中央に黒い帯を表示
+                        pyxel.rect(0, 125, 300, 30, 0)
+                        ###白のlineを描画
+                        pyxel.line(0, upper_line_y, 300, upper_line_y, 7)
+                        pyxel.line(0 + 20 * (self.gamestate.scenetimer-30), lower_line_y, 300, lower_line_y, 7)
+                    elif 45 <= self.gamestate.scenetimer < 60:
+                        ###画面中央に黒い帯を表示
+                        pyxel.rect(0, 125, 300, 30 -2*(self.gamestate.scenetimer-45), 0)
+                        ###白のlineを描画
+                        pyxel.line(0, upper_line_y, 300 -20 * (self.gamestate.scenetimer-45), upper_line_y, 7)
+
+                if 0 <= self.gamestate.scenetimer < 45:
+                    if self.gamestate.scene == C_SCENE_HOME:
+                        self.bdf2.draw_text(130, 132, "浜辺", 7)
+                    if self.gamestate.scene == C_SCENE_MOON:
+                        self.bdf2.draw_text(120, 132, "月見丘", 7)
+                    if self.gamestate.scene == C_SCENE_FIRE:
+                        self.bdf2.draw_text(115, 132, "灯籠の小路", 7)
+                    if self.gamestate.scene == C_SCENE_WATER:
+                        self.bdf2.draw_text(120, 132, "雨降る池", 7)
+                    if self.gamestate.scene == C_SCENE_WOOD:
+                        self.bdf2.draw_text(120, 132, "緑の桟道", 7)
+                    if self.gamestate.scene == C_SCENE_GOLD:
+                        self.bdf2.draw_text(120, 132, "砂の檻", 7)
+                    if self.gamestate.scene == C_SCENE_SOIL:
+                        self.bdf2.draw_text(120, 132, "献花台", 7)
+                    if self.gamestate.scene == C_SCENE_SUN:
+                        self.bdf2.draw_text(120, 132, "雪の日", 7)
+                    if self.gamestate.scene == C_SCENE_CHOICE:
+                        self.bdf2.draw_text(130, 132, "帰路", 7)
+            
             ###メニュー＆会話用のエリアを黒く表示する
             pyxel.rect(0, 232, 300, 68, 0)    
             ###デモタイトル表示
@@ -2211,10 +2353,13 @@ class MyApp:
                                         # self.scroll_distance = 0
                                         self.gamestate.scene = self.nearest_obj.room_no
                                         self.gamestate.scenario[0][0] = self.nearest_obj.room_no
+                                        self.gamestate.scenetimer = 0
                                         ###パララックス背景用変化率をSceneに応じてリセット
                                         self.parallax_value_set(self.gamestate.scene)
                                         ###パララックス背景用スクロール値をリセット
                                         self.scroll_positions = [0.1 for _ in range(9)]
+                                        # ###パーティクルシステムのインスタンスをリセット
+                                        self.psys_instances = list()
                                         self.generateObjects() ##現在のシーンに応じてオブジェクトを生成
                                         ###チェック中のオブジェクトをリセット
                                         self.nearest_obj = None
@@ -2222,8 +2367,7 @@ class MyApp:
                                         self.checking_obj_direction = 4
                                         ###パーティクルシステムのタイマーをリセット
                                         self.timer_for_psys = 0
-                                        # ###パーティクルシステムのインスタンスをリセット
-                                        # self.psys_instances = list()
+
                                 
                                 ###話しかけた・調べた対象がキャラクターまたはアタリオブジェクトだった場合、取得アイテムチェックを呼び出す。
                                 if (self.nearest_obj.__class__.__name__ in("Character", "Atari")):
@@ -2295,16 +2439,80 @@ class MyApp:
                     self.invsys.subwindow_selected_index = min(1, self.invsys.subwindow_selected_index + 1)
                     pyxel.play(3,8) #SE再生(カーソル移動)
                 elif pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
+                    ###「使う」選択肢を選んだとき
+                    ###選択中アイテムに応じたテキスト取得や効果実行
+                    if self.invsys.subwindow_selected_index == 0:
+                        ###選択中アイテム名を取得
+                        selected_item_name = list(self.invsys.items_and_valuables.keys())[self.invsys.selected_index]
+                        scene    = self.gamestate.scenario[0][0]
+                        scenario = self.gamestate.scenario[0][1]
+                        branch   = self.gamestate.scenario[0][2]
+                        ###使用アイテムとシーン・シナリオ・隣接キャラクタ・プレイヤー状態に応じたテキストを取得する
+                        if self.nearest_obj.__class__.__name__ in("Character", "Atari", "Door", "Jerry"):
+                            if self.nearest_obj.flg_reaction:
+                                self.get_text_on_use_item(selected_item_name, scene, scenario, branch, self.player, self.nearest_obj)
+                            else:
+                                self.get_text_on_use_item(selected_item_name, scene, scenario, branch, self.player)
                     self.invsys.execute_option()  # 選択肢を実行
                     self.invsys.subwindow_open = False  # サブウィンドウを閉じる
                     self.invsys.subwindow_selected_index = 0
                     print("SUBWINDOW CLOSED!")
+
             else:
                 if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
                     if (len(self.invsys.items_and_valuables) > 0):
                         self.invsys.subwindow_open = True  # サブウィンドウを開く
                         pyxel.play(3,22) #SE再生(Menuオープン)
                         print("SUBWINDOW OPENED!")
+
+    def get_text_on_use_item(self, item_name, scene, scenario, branch, player, obj_with=None):
+        ###使用アイテム応じたテキスト・効果を取得する
+        print("You selected " + item_name + "and get_text_on_use_item() is called!")
+        if item_name in "おにぎり":
+            self.get_text_on_use_item_onigiri(scene, scenario, branch, player, obj_with)
+        # elif item_name == "まんじゅう":
+        #     self.get_text_on_use_item_manju(scene, scenario, branch, player, obj_with)
+        # elif item_name == "クッキー":
+        #     self.get_text_on_use_item_cookie(scene, scenario, branch, player, obj_with)
+        # elif item_name == "チョコレート":
+        #     self.get_text_on_use_item_chocolate(scene, scenario, branch, player, obj_with)
+        # elif item_name == "ぽんぽこペパロニピザ":
+        #     self.get_text_on_use_item_pizza(scene, scenario, branch, player, obj_with)
+        # elif item_name == "金のコイン":
+        #     self.get_text_on_use_item_coin(scene, scenario, branch, player, obj_with)
+        # elif item_name == "囁く葉":
+        #     self.get_text_on_use_item_leaf(scene, scenario, branch, player, obj_with)
+        # elif item_name == "冷たい小瓶":
+        #     self.get_text_on_use_item_bottle(scene, scenario, branch, player, obj_with)
+        # elif item_name == "煤けた灰":
+        #     self.get_text_on_use_item_ash(scene, scenario, branch, player, obj_with)
+        # elif item_name == "歌う花":
+        #     self.get_text_on_use_item_flower(scene, scenario, branch, player, obj_with)
+        # elif item_name == "きれいな葉":
+        #     self.get_text_on_use_item_leaf2(scene, scenario, branch, player, obj_with)
+
+    ###シーン・シナリオ・隣接キャラクタ・プレイヤー座標に応じたテキスト取得や効果を得る
+    def get_text_on_use_item_onigiri(self, scene, scenario, branch, player, obj_with):
+        self.recoverPlayerHp(1)
+
+    # def get_text_on_use_item_manju(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_cookie(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_chocolate(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_pizza(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_coin(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_leaf(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_bottle(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_ash(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_flower(self, scene, scenario, branch, player, obj_with):
+    # def get_text_on_use_item_leaf2(self, scene, scenario, branch, player, obj_with):
+
+    ###playerのHPを引数分だけ回復
+    def recoverPlayerHp(self, point):
+        if self.player.hp < self.player.max_hp:
+            self.player.hp += point
+            ###playerのHPが最大値を超えたら最大値に戻す
+            if self.player.hp > self.player.max_hp:
+                self.player.hp = self.player.max_hp
 
     def parallax_value_set(self, scene):
         # 各レイヤーのスクロール速度を設定

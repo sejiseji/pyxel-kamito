@@ -216,9 +216,12 @@ class InventorySystem:
                 # selected_indexに該当するアイテムがなくなったらselected_indexを調整
                 if self.selected_index >= len(self.items_and_valuables):
                     self.selected_index = len(self.items_and_valuables) - 1
+            
         else:  # やめる
             pyxel.play(3,12) #SE再生(キャンセル)
             print("Canceled")
+
+
 
     def get_selected_description(self):
         ###items_and_valuablesの中で選択中のアイテム名をもとに、説明文を取得する
@@ -237,3 +240,46 @@ class InventorySystem:
         ###scenario, branch, character_noに応じた思考を返す
         if character_no == C_CHARA_WOLF:
             return [self.itemdict.thought_dict_WOLF[list(self.items_and_valuables.keys())[self.selected_index]]]
+
+
+    # def get_text_on_use_item(self, item_name, scene, scenario, branch, character_no, player_x, player_y):
+    #     ###item_nameに応じたテキスト・効果を取得する
+    #     if item_name == "おにぎり":
+    #         self.get_text_on_use_item_onigiri(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "まんじゅう":
+    #         self.get_text_on_use_item_manju(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "クッキー":
+    #         self.get_text_on_use_item_cookie(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "チョコレート":
+    #         self.get_text_on_use_item_chocolate(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "ぽんぽこペパロニピザ":
+    #         self.get_text_on_use_item_pizza(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "金のコイン":
+    #         self.get_text_on_use_item_coin(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "囁く葉":
+    #         self.get_text_on_use_item_leaf(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "冷たい小瓶":
+    #         self.get_text_on_use_item_bottle(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "煤けた灰":
+    #         self.get_text_on_use_item_ash(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "歌う花":
+    #         self.get_text_on_use_item_flower(scene, scenario, branch, character_no, player_x, player_y)
+    #     elif item_name == "きれいな葉":
+    #         self.get_text_on_use_item_leaf2(scene, scenario, branch, character_no, player_x, player_y)
+
+    # def get_text_on_use_item_onigiri(scene, scenario, branch, character_no, player_x, player_y):
+    #     ###シーン・シナリオ・隣接キャラクタ・プレイヤー座標に応じたテキストを取得・効果を取得する
+    #     ###playerのHPを回復する
+    #     self.player_hp += 1
+
+    # def get_text_on_use_item_manju(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_cookie(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_chocolate(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_pizza(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_coin(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_leaf(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_bottle(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_ash(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_flower(scene, scenario, branch, character_no, player_x, player_y):
+    # def get_text_on_use_item_leaf2(scene, scenario, branch, character_no, player_x, player_y):
+
