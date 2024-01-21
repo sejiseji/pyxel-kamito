@@ -42,15 +42,15 @@ class WaterTree:
             # rndnum = random.randint(0, self.num_branch)
             for x, y, angle, length, width in branches:
                 end_x, end_y = self.draw_branch(x, y, angle, length, width)
-                # 枝ごとに異なるタイミングで明滅
-                if (pyxel.frame_count//30 + count) % 4 == 0:
-                    rndminus = random.randint(0, 1)
-                    if rndminus == 0:
-                        rndminus = -1
-                    rndx = random.randint(0, 2) * rndminus
-                    rndy = random.randint(0, 2) * rndminus
-                    if count >= 5:
-                        pyxel.pset(x + rndx, y + rndy, random.choice([9,10]))
+                # # 枝ごとに異なるタイミングで明滅
+                # if (pyxel.frame_count//30 + count) % 4 == 0:
+                #     rndminus = random.randint(0, 1)
+                #     if rndminus == 0:
+                #         rndminus = -1
+                #     rndx = random.randint(0, 2) * rndminus
+                #     rndy = random.randint(0, 2) * rndminus
+                #     if count >= 5:
+                #         pyxel.pset(x + rndx, y + rndy, random.choice([9,10]))
 
                 # 新しい世代の枝のパラメータを計算
                 gen_length = length * 0.75
