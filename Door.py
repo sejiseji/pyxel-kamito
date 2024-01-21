@@ -7,6 +7,7 @@ C_DOOR_WIDTH = 16 * 1
 C_DOOR_HEIGHT = 16 * 3
 C_DOOROPEN_SPEED = 2
 C_PX_AROUND_ATARI = 6 #当たり判定用のy軸不可侵エリア幅
+C_WAITTIME_DOOROPEN = 9999
 
 
 ##########-----------------------------------------------------------------------
@@ -29,8 +30,11 @@ class Door(GameObject):
         self.is_closing = False
         ###開き幅
         self.open_width = 0 ##デフォルトでは閉じている
+        ###戸締まり猶予時間
+        self.open_wait = 30
 
         self.flg_reaction = False
+        self.flg_ocreaction = False
         self.is_playing = False
 
         self.room_no = roomnumber
@@ -39,6 +43,15 @@ class Door(GameObject):
 
         self.draw_x = 0
         self.draw_y = 0
+
+        ###テキスト間利用の変数
+        self.scene_no = 0
+        self.scenario_no = 0
+        self.branch_no = 0
+        self.conversation_with = 0
+        self.responce_no = 0
+        self.rtn_txt_no = 0
+
 
     def update(self):
         ###closing状態で開き幅が0になったら、closingを終了し、closed状態を開始する
@@ -55,6 +68,12 @@ class Door(GameObject):
         ###closingフラグ下におけるclose動作
         if (self.is_closing) and (self.open_width > 0):
             self.open_width -= 2
+
+        if self.is_opened and self.open_wait > 0:
+            self.open_wait -= 1
+
+        if self.is_closed and self.open_wait == 0:
+            self.open_wait = C_WAITTIME_DOOROPEN
 
         ###表示順序の基準となる、足元の座標情報を更新する
         self.position_x = self.x + C_DOOR_WIDTH/2 + 4
@@ -75,42 +94,42 @@ class Door(GameObject):
             offsets = [0, 3, 11, 7, 12, 9, 2]
             self.frames01, self.frames02, self.frames03, self.frames04, self.frames05, self.frames06, self.frames07 = [(base_frame + offset) % 15 for offset in offsets]
 
-            if self.room_no == 0: # 0:暗闇の戸
-                pyxel.pal(7, 0)
-            if self.room_no == 1: # 1:宵の戸
+            if self.room_no == 0: # 0:HOMEの戸
+                pyxel.pal(7, 6)
+            if self.room_no == 1: # 1:MOONの戸
                 pyxel.pal(7, 7)
-            if self.room_no == 2: # 2:灯の戸
+            if self.room_no == 2: # 2:FIREの戸
                 pyxel.pal(7, 8)
-            if self.room_no == 3: # 3:波紋の戸
+            if self.room_no == 3: # 3:WATERの戸
                 pyxel.pal(7, 12)
-            if self.room_no == 4: # 4:刻時の戸
+            if self.room_no == 4: # 4:WOODの戸
                 pyxel.pal(7, 11)
-            if self.room_no == 5: # 5:静寂の戸
+            if self.room_no == 5: # 5:GOLDの戸
                 pyxel.pal(7, 10)
-            if self.room_no == 6: # 6:記憶の戸
+            if self.room_no == 6: # 6:SOILの戸
                 pyxel.pal(7, 15)
-            if self.room_no == 7: # 7:日輪の部屋
+            if self.room_no == 7: # 7:SUNの部屋
                 pyxel.pal(7, 7)
             pyxel.blt(self.draw_x + 5,  self.draw_y + 4, 2, 88, self.frames01 * 5, 5, 5, 0)
             pyxel.blt(self.draw_x + 9,  self.draw_y +22, 2, 88, self.frames04 * 5, 5, 5, 0)
             pyxel.blt(self.draw_x + 5,  self.draw_y +40, 2, 88, self.frames07 * 5, 5, 5, 0)
             pyxel.pal()
 
-            if self.room_no == 0: # 0:暗闇の戸
-                pyxel.pal(7, 0)
-            if self.room_no == 1: # 1:宵の戸
+            if self.room_no == 0: # 0:HOMEの戸
+                pyxel.pal(7, 12)
+            if self.room_no == 1: # 1:MOONの戸
                 pyxel.pal(7, 13)
-            if self.room_no == 2: # 2:灯の戸
+            if self.room_no == 2: # 2:FIREの戸
                 pyxel.pal(7, 2)
-            if self.room_no == 3: # 3:波紋の戸
+            if self.room_no == 3: # 3:WATERの戸
                 pyxel.pal(7, 5)
-            if self.room_no == 4: # 4:刻時の戸
+            if self.room_no == 4: # 4:WOODの戸
                 pyxel.pal(7, 3)
-            if self.room_no == 5: # 5:静寂の戸
+            if self.room_no == 5: # 5:GOLDの戸
                 pyxel.pal(7, 9)
-            if self.room_no == 6: # 6:記憶の戸
+            if self.room_no == 6: # 6:SOILの戸
                 pyxel.pal(7, 4)
-            if self.room_no == 7: # 7:日輪の部屋
+            if self.room_no == 7: # 7:SUNの部屋
                 pyxel.pal(7, 15)
             pyxel.blt(self.draw_x +10,  self.draw_y +10, 2, 88, self.frames02 * 5, 5, 5, 0)
             pyxel.blt(self.draw_x + 4,  self.draw_y +16, 2, 88, self.frames03 * 5, 5, 5, 0)
@@ -189,9 +208,11 @@ class Door(GameObject):
         self.is_opening = True
 
     def closeStart(self):
-        ###開放状態を終了してclose動作を開始する
-        self.is_opened = False
-        self.is_closing = True
+        ###開放維持時間がなくなっていれば、開放状態を終了してclose動作を開始する
+        # if self.open_wait == 0:
+        #     self.is_opened = False
+        #     self.is_closing = True
+        print("打鍵に反応するドアcloseを一時的にオフにしています。")
 
     # def is_colliding_with(self, other):
     #     range_x = self.width

@@ -6,10 +6,12 @@ C_JERRY_WIDTH = 16 * 2
 C_JERRY_HEIGHT = 16 * 2 + 8
 C_JERRY_SPEED = 2
 
+C_SCENE_WATER = 3
+
 ##########-----------------------------------------------------------------------
 # くらげ
 class Jerry(GameObject):
-    def __init__(self, x=0, y=0):
+    def __init__(self, x=0, y=0, obj_no=0):
         super().__init__(x,y)
         self.width = C_JERRY_WIDTH
         self.height = C_JERRY_HEIGHT
@@ -21,10 +23,21 @@ class Jerry(GameObject):
 
         ###
         self.is_playing = False
-
         self.draw_x = 0
         self.draw_y = 0
-        
+
+        self.obj_no = obj_no
+
+        ###シーンごとに表示するテキストを変えるための変数
+        self.scene_no = 3 # 0:home 1:door1 2:door2 3:door3 4:door4 5:door5 6:door6 7:door7 8:ending
+        self.scenario_no = 3
+        self.branch_no = 0
+        self.conversation_with = 0
+        self.responce_no = 0
+        self.rtn_txt_no = 0
+        self.face_disp = True
+        self.name_disp = False
+        self.door_open_array = list()
 
     def update(self):
         ###表示順序の基準となる、足元の座標情報を更新する
@@ -63,6 +76,14 @@ class Jerry(GameObject):
 
         return False
 
+
+    def setFlgWaitingResponce(self):
+        self.flg_waiting_responce = True
+
+    def cancelFlgWaitingResponce(self):
+        self.flg_waiting_responce = False
+
+
     def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no, door_open_array):
         ###当該シーン・シナリオ配下でcharacter_noがプレイヤーconversation_withに話しかけられた場合の発話
         #----------------------------------------------------------- 
@@ -76,8 +97,21 @@ class Jerry(GameObject):
         self.door_open_array = door_open_array
 
         ### ◆シーン１　ー　シナリオ１
-        if((self.scene_no >= 0) and (self.scenario_no == 0) and (self.branch_no == 0)):
-            return ["クラゲのような生き物だ。","表面が透きとおっていて、触るとツヤツヤしている。"]
-        
-    # def getReactionText(self):
-    #     return ["クラゲのような生き物だ。","表面が透きとおっていて、触るとツヤツヤしている。"]
+        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no == 3) and (self.branch_no == 0)):
+            if self.rtn_txt_no == 0:
+                self.rtn_txt_no += 1
+                self.cancelFlgWaitingResponce()
+                return ["・・・・・？","え、うそ。人？","",
+                        "いや、イヌ？オオカミ？","じゃなくて。","",
+                        "ま、ままままままってまって。","え？夢？？？？"]
+            if self.rtn_txt_no == 1:
+                self.rtn_txt_no = 0
+                self.name_disp = True
+                self.setFlgWaitingResponce()
+                self.branch_no += 1
+                return ["あああああああたし、ジェリコ！", "あなたは？",""]
+        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no == 3) and (self.branch_no == 1)):
+            if self.rtn_txt_no == 0:
+                self.cancelFlgWaitingResponce()
+                return ["よよよ よろしくお願いします・・・。","わわ、わたしもう３年も魚やカエルとしか話してなくて・・・","お会いできて ほほほ 本当にうれしいです。"]
+

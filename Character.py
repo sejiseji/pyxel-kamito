@@ -83,6 +83,13 @@ class Character(GameObject):
         self.wk_moved_speed = 0
 
         ###会話とシナリオに付随したテキスト返却のための管理パラメタ
+        self.scene_no = 0
+        self.scenario_no = 0
+        self.branch_no = 0
+        self.conversation_from = 0
+        self.conversation_with = 0
+        self.name_disp = True
+        self.face_no = 7 ### 0:通常 1:喜 2:怒 3:哀 4:楽 5:驚 6:怖 7:喋
 
         # 軌跡描画用の座標記録配列
         self.trajectory_point = [[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y],[self.x, self.y]]
@@ -330,12 +337,10 @@ class Character(GameObject):
         ###当該シーン・シナリオ配下でcharacter_noをプレイヤーキャラクタとして操作している場合の発話。
         #----------------------------------------------------------- 
         ###シーン番号、シナリオ番号、返却テキスト番号（進行に合わせて返却のたびにカウントアップ、ただし質問中はそのまま）、質問中フラグ、返答結果番号
-        self.scene_no = scene_no ### シーン番号
+        self.scene_no    = scene_no ### シーン番号
         self.scenario_no = scenario_no ### シナリオ番号
-        self.branch_no = branch_no ### シナリオ分岐番号
-        # self.character_no == C_CHARA_WOLF
-        # self.conversation_with = C_CHARA_GIRL ### 誰と会話中か
-        self.character_no == conversation_from
+        self.branch_no   = branch_no ### シナリオ分岐番号
+        self.character_no = conversation_from
         self.conversation_with = conversation_with ### 誰と会話中か
         #----------------------------------------------------------- 
 
@@ -343,24 +348,96 @@ class Character(GameObject):
         ###self.flg_waiting_responce = False ### 相手からの返答待ち（＝質問中）フラグ
 
         ### ◆シーン１　ー　シナリオ１
-        if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 0)):
-            ### プレイヤー : WOLF →　キャラ　：　GIRLのときの【前者】の発話。
-            if((self.character_no == C_CHARA_WOLF) and (self.conversation_with == C_CHARA_GIRL)):
+        ### プレイヤー : WOLF →　キャラ　：　GIRLのときの【前者】の発話。
+        if((self.character_no == C_CHARA_WOLF) and (self.conversation_with == C_CHARA_GIRL)):
+            if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 0)):            
                 if(self.rtn_txt_no == 0): ### 1回目返事
                     self.rtn_txt_no += 1
+                    self.face_no = 7
+                    self.name_disp = True
                     self.cancelFlgWaitingResponce() 
-                    return ["確か神社で・・・","","",
-                            "参拝してたはず。","","",
-                            "柏手を打って・・・","そのとき後ろから・・・、声がした。","そして・・・・・・",
-                            "そして今・・・だな。一体どういうことだ・・・？"]
+                    return ["あ・・・えと。俺は、ラナ。","","",
+                            "さ、さっきまで確か神社で・・・","","",
+                            "ひとりで参拝してたはず、だ。","","",
+                            "手を打って","後ろで声がして","そして・・・・・・。",
+                            "そして今・・・だ。","ここ・・・どこなんだ・・・？"]
+                if(self.rtn_txt_no == 1): ### 2回目返事
+                    self.rtn_txt_no += 1
+                    self.cancelFlgWaitingResponce() 
+                    return ["ま、まってくれよ・・・","","",
+                            "願いを途中止めしたから？","ここにいる理由が？","それだけ？",
+                            "つーか、ここどこだよ？","からだは？？","ここに引きずり込まれたってことか！？"]
+                if(self.rtn_txt_no == 2): ### 3回目返事
+                    self.rtn_txt_no += 1
+                    self.cancelFlgWaitingResponce() 
+                    return ["なんだよそりゃあ・・・。","意識って・・・強引にも程があるだろ。","問答無用じゃねえか。",
+                            "うーーーーーーーーーーーん・・・。","納得・・・・できてねえけど・・・","",
+                            "とりあえず　わかったよ・・・。","願いがハンパだった・・・と。","",
+                            "じゃあ・・・、改めて願いをカミサマに伝えれば戻れるのか？"]
+                if(self.rtn_txt_no == 3): ### 4回目返事
+                    self.rtn_txt_no += 1
+                    self.cancelFlgWaitingResponce() 
+                    return ["そりゃもちろ・・・ん？","あ？","",
+                            "思い出せ・・・ない・・・？","","",
+                            "思い出せないぞ・・・なんで・・・"]
+                if(self.rtn_txt_no == 4): ### 5回目返事
+                    self.rtn_txt_no += 1
+                    self.cancelFlgWaitingResponce() 
+                    return ["はあ！？","いや、詰んでんじゃねえかそんなの・・・","",
+                            "で、でも！","何かしら伝えておけばいいんだろ？","",
+                            "そしたら元の場所に返してもらえるんじゃ・・・"]
+                if(self.rtn_txt_no == 5): ### 6回目返事
+                    self.rtn_txt_no = 0
+                    self.branch_no += 1
+                    self.cancelFlgWaitingResponce() 
+                    return ["「静かの水域」に集まる、近しい願いの扉・・・。","","",
+                            "それを探す・・・。","","",
+                            "扉の先の住人と会って、","忘れた願いを思い出す・・・だな。","わかったよ・・・。"]
+
+    def getActionTextAt(self, scene_no, scenario_no, branch_no, conversation_from, conversation_with):
+        #----------------------------------------------------------- 
+        self.scene_no    = scene_no ### シーン番号
+        self.scenario_no = scenario_no ### シナリオ番号
+        self.branch_no   = branch_no ### シナリオ分岐番号
+        self.character_no = conversation_from
+        self.conversation_with = conversation_with ### 誰と会話中か
+        #----------------------------------------------------------- 
+        if((self.character_no == C_CHARA_WOLF) and (self.conversation_with == 3)): ### AtariのNo.3:猫
+            if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 1)):            
+                if(self.rtn_txt_no == 0): ### 1回目返事
+                    self.cancelFlgWaitingResponce() 
+                    return ["ああ。","この水域に集まる扉、ってのを探してる。","その先に行きたいんだけど・・・わかるか？"]
+            if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 2)):   
+                if(self.rtn_txt_no == 0): ### 2回目返事
+                    self.cancelFlgWaitingResponce() 
+                    return ["どうしてそんなに協力的なんだ？","なにか、理由でもあるのか？",""]
+
+    def getActionTextJry(self, scene_no, scenario_no, branch_no, conversation_from, conversation_with):
+        #----------------------------------------------------------- 
+        self.scene_no    = scene_no ### シーン番号
+        self.scenario_no = scenario_no ### シナリオ番号
+        self.branch_no   = branch_no ### シナリオ分岐番号
+        self.character_no = conversation_from
+        self.conversation_with = conversation_with ### 誰と会話中か
+        #----------------------------------------------------------- 
+        print("conversation_with =" + str(self.conversation_with))
+        if((self.character_no == C_CHARA_WOLF) and (self.conversation_with == 90)): ### JerryのNo.90
+            if((self.scene_no == 3) and (self.scenario_no == 3) and (self.branch_no == 1)):            
+                if(self.rtn_txt_no == 0): ### 1回目返事
+                    self.cancelFlgWaitingResponce() 
+                    return ["おちつけって。俺はラナ。","あとイヌじゃねえ。オオカミだ。","訳あって、あんたみてーな人達から話を聞いてんだ。"]
+            if((self.scene_no == 3) and (self.scenario_no == 3) and (self.branch_no == 2)):   
+                if(self.rtn_txt_no == 0): ### 2回目返事
+                    self.cancelFlgWaitingResponce() 
+
 
     def getReactionText(self, scene_no, scenario_no, branch_no, conversation_with, response_no, door_open_array):
         ###当該シーン・シナリオ配下でcharacter_noがプレイヤーconversation_withに話しかけられた場合の発話
         #----------------------------------------------------------- 
         ###シーン番号、シナリオ番号、返却テキスト番号（進行に合わせて返却のたびにカウントアップ、ただし質問中はそのまま）、質問中フラグ、返答結果番号
-        self.scene_no = scene_no ### シーン番号
+        self.scene_no    = scene_no ### シーン番号
         self.scenario_no = scenario_no ### シナリオ番号
-        self.branch_no = branch_no ### シナリオ分岐番号
+        self.branch_no   = branch_no ### シナリオ分岐番号
         self.conversation_with = conversation_with ### 誰と会話中か
         # self.conversation_with = C_CHARA_WOLF ### 誰と会話中か
         #----------------------------------------------------------- 
@@ -375,44 +452,105 @@ class Character(GameObject):
             ### ◆シーン１　ー　シナリオ１
             if((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 0)):
                 if(self.rtn_txt_no == 0):
+                    self.face_no = 7
+                    self.name_disp = True
                     self.rtn_txt_no += 1
                     self.cancelFlgWaitingResponce()
-                    return ["あ。もう・・・やっと起きたよ〜。"]
+                    return ["あ。おはよ。","","",
+                            "あたしはカナ。","あなた、自分のことわかる？"]
                 if(self.rtn_txt_no == 1):
                     self.rtn_txt_no += 1
                     self.setFlgWaitingResponce() ### 1回目返事待機
-                    return ["ねえ、目覚める前のことさ、覚えてる？"]
+                    return ["あと、目覚める前のこと、覚えてる？"]
                 if(self.rtn_txt_no == 2):
                     self.rtn_txt_no += 1
-                    self.cancelFlgWaitingResponce()
-                    return ["うん。意識はハッキリしてんね。","","",
-                            "あのとき、キミお願い止めちゃったでしょ。","目まで開けちゃってさ。","礼もせずに振り向いて・・・。",
-                            "それが、ここにいる原因。"]
+                    self.setFlgWaitingResponce() ### 2回目返事待機
+                    return ["うんうん。だいじょうぶそうだね。","えっと・・・","まず端的に言うね。",
+                            "あのとき　お願い　途中で止めちゃったでしょ。","心で唱えきる前に、目まで開けちゃって。","それが原因なの。",
+                            "願いはまだ、神様にとどいてないの。","そして、願いを捧げないとここからは出られない。","",
+                            "それが、キミがここにいる理由だよ。"]
                 if(self.rtn_txt_no == 3):
+                    self.rtn_txt_no += 1
+                    self.setFlgWaitingResponce() ### 3回目返事待機
+                    return ["ここは現世じゃないんだ。神様の庭だよ。","あと、体は大丈夫だよ。","",
+                            "ここにあるのは、キミの意識だけなの。","","",
+                            "現世では、刹那にも満たない一瞬なんだ。","神様が意識を引っ張ってきちゃうんだけど・・・","ちょっと強引だよね。"]
+                if(self.rtn_txt_no == 4):
+                    self.rtn_txt_no += 1
+                    self.setFlgWaitingResponce() ### 4回目返事待機
+                    return ["そのとおり。","でも、１つ問題があってね・・・。","",
+                            "参拝での自分の願い、思い出せる？",""]
+                if(self.rtn_txt_no == 5):
+                    self.rtn_txt_no += 1
+                    self.setFlgWaitingResponce() ### 5回目返事待機
+                    return ["んー・・・やっぱりか。","問題って、それなの。","",
+                            "連れてこられた人が、願いを覚えてないんだよね・・・。","","",
+                            "意識の間隙で引っ張っちゃうからだと思うんだけど。",""]
+                if(self.rtn_txt_no == 6):
+                    self.rtn_txt_no = 0
+                    self.setFlgWaitingResponce() ### 5回目返事待機
+                    return ["それはダメなの。","神様ってさ、全部お見通しだから。","神への虚偽は重罪になっちゃうよ。",
+                            "それに詰みってわけでもないんだ。","ここ「静かの水域」は、近い願いの扉が集まるの。","",
+                            "扉の住人達が抱えているものを知れば、","きっと、キミの願いのヒントになると思うよ。"]
+            if ((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 1)):
+                if(self.rtn_txt_no == 0):
                     self.cancelFlgWaitingResponce()
-                    return ["まずは周囲を調べましょ。"]
+                    return ["まずはここからつながる扉を探しましょ。"]
+            if ((self.scene_no == 0) and (self.scenario_no == 0) and (self.branch_no == 2)):
+                if(self.rtn_txt_no == 0):
+                    self.cancelFlgWaitingResponce()
+                    return ["わお！扉だよ！","これで、次の場所に行けるね！","さー！はりきって行こー！"]
             if((self.scene_no == 0) and (self.scenario_no >= 1)):
                     self.cancelFlgWaitingResponce()
-                    return ["手がかり見つかりそう？"]
+                    return ["願いの手がかり、見つかりそう？"]
 
         ### プレイヤー : WOLF →　キャラ　：　MICHIのときの【後者】の発話
         if((self.conversation_with == C_CHARA_WOLF) and (self.character_no == C_CHARA_MICHI)):
-            if((self.scene_no == 1) and (self.scenario_no == 0) and (self.branch_no == 0)):
+            if((self.scene_no == 1) and (self.scenario_no == 1) and (self.branch_no == 0)):
                 if(self.rtn_txt_no == 0):
                     self.rtn_txt_no += 1
                     self.cancelFlgWaitingResponce()
-                    return ["誰？","","","どこから来たの？"]
+                    return ["誰？","","",
+                            "どこから来たの？"]
                 if(self.rtn_txt_no == 1):
                     self.rtn_txt_no += 1
                     self.cancelFlgWaitingResponce()
-                    return ["……出口と、鍵？","うっかり迷い込んだのかな。ご愁傷さま。","",
+                    return ["うっかり迷い込んだの？ご愁傷さま。","","",
+                            "え？　猫？","あぁ　アイツまた勝手に招いたのね。","まったく・・・。",
                             "わたしはミチ。ここで花火を見てるんだ。","・・・ずっとね。"]
                 if(self.rtn_txt_no == 2):
+                    self.rtn_txt_no = 0
                     self.cancelFlgWaitingResponce()
-                    self.scenario_no += 1
-                    return ["戸は奥にあるよ。","さっき出てきた。・・・触ろうとしたら透けちゃうんだけど。","わたしは触れないけど、あなたなら触れるかも。"]
-            if((self.scene_no == 1) and (self.scenario_no >= 1) and (self.branch_no == 0)):
-                    return ["面白いもの見つけたらさ、見せに来てよ。","たまにさ、やっぱり・・・時々、寂しくなるから。",""]
+                    self.branch_no += 1
+                    return ["戸は奥にあるよ。","あんたと一緒に出てきた。・・・透けちゃうんだけど。","わたしは触れないけど、あなたなら触れるかも。"]
+            if((self.scene_no == 1) and (self.scenario_no >= 1) and (self.branch_no == 1))or((self.scene_no == 1) and (self.scenario_no >= 2)):
+                if(self.rtn_txt_no == 0):
+                    self.rtn_txt_no += 1
+                    return ["面白いもの見つけたらさ、見せに来てよ。","たまにときどき・・・　ひとりが寂しくなるから、さ。",""]
+                if(self.rtn_txt_no == 1):
+                    self.rtn_txt_no = 0
+                    return ["ここの花火ね、","持ち込まれたものに反応するみたいなの。",""]
+
+        # ### プレイヤー : WOLF →　キャラ　：　Jericoのときの【後者】の発話
+        # if((self.conversation_with == C_CHARA_WOLF) and (self.character_no == 9900)):
+        #     ### ◆シーン１　ー　シナリオ１
+        #     if ((self.scene_no == 3) and (self.scenario_no == 0) and (self.branch_no == 0)):
+        #         if self.rtn_txt_no == 0:
+        #             self.rtn_txt_no += 1
+        #             self.cancelFlgWaitingResponce()
+        #             return ["・・・・・？","え、うそ。人？","",
+        #                     "いや、イヌ？オオカミ？","じゃなくて。","",
+        #                     "ま、ままままままってまって。"]
+        #         if self.rtn_txt_no == 1:
+        #             self.rtn_txt_no = 0
+        #             self.name_disp = True
+        #             self.setFlgWaitingResponce()
+        #             self.branch_no += 1
+        #             return ["あああああああたし、ジェリコ！", "あなたは？",""]
+        #     if ((self.scene_no == 3) and (self.scenario_no == 0) and (self.branch_no == 1)):
+        #         if self.rtn_txt_no == 0:
+        #             self.cancelFlgWaitingResponce()
+        #             return ["よよよよろしくお願いします・・・。","わわ、わたしもうかれこれ３年も魚としか話してなくて","お会いできてほほほ本当にうれしいです。"]
 
 
         ### プレイヤー : WOLF →　キャラ　：　LIKIのときの【後者】の発話
@@ -422,5 +560,8 @@ class Character(GameObject):
                     self.rtn_txt_no += 1
                     self.cancelFlgWaitingResponce()
                     return ["ん？おめーどっから来た？"]
+                if(self.rtn_txt_no == 1):
+                    self.cancelFlgWaitingResponce()
+                    return ["ここぁ神聖な場所だかんな。","ぜってーに騒ぐんじゃねえぞ。",""]
         ###会話によってシーン・シナリオ・ブランチに変化を与えたいことがある。ゲーム本体側でこれらの値を取得してゲーム本体側へ上書き利用する。
         # →[self.scene_no, self.scenario_no, self.branch_no]
