@@ -9,6 +9,7 @@ from Jerry import Jerry
 from Atari import Atari
 from InventorySystem import InventorySystem
 from Camera import Camera
+from Butterfly import Butterfly
 
 from Moon import Moon
 from Firework import Firework
@@ -24,6 +25,7 @@ from Flower import Stem
 from EllipticalOrbit import EllipticalOrbit
 from EchoChamberVisualizer import EchoChamberVisualizer
 from DoorTranParticle import DoorTranParticle
+from MovingLines import MovingLines
 
 
  
@@ -73,6 +75,7 @@ C_PLAY  = 1
 C_PAUSE = 2
 C_MENU  = 3
 C_END   = 4
+C_DEAD  = 5
 ###gamestate.scene用定数
 C_SCENE_HOME  = 0
 C_SCENE_MOON  = 1
@@ -130,12 +133,13 @@ class GameState:
         # self.scenario[0][1] = 8
         # self.scenario[0][2] = 0
 
-        ##3doors open
-        self.door_open_array = [True, True, True, True, False, False, False, False, False]
+        ##テスト用設定
+        self.door_open_array = [True, True, True, True, True, True, True, True, True]
+        # self.door_open_array = [False, False, False, False, False, False, False, False, False]
         self.door_open_array_bf = self.door_open_array.copy()
         ##scenarioセット
-        self.scenario[0][1] = 3
-        self.scenario[0][2] = 0
+        self.scenario[0][1] = 7 ###到達済scene番号
+        self.scenario[0][2] = 0 ###到達済event番号
 
         ###door‐通過時用
         self.door_transition = False
@@ -167,7 +171,6 @@ class MyApp:
         self.gamestate.scene = C_SCENE_HOME ##シーンをホームに設定
         self.gamestate.scenetimer = 0
 
-
         ###変数宣言
         self.hensuSengen()
         ###フォント設定
@@ -189,19 +192,28 @@ class MyApp:
         self.invsys.add_valuable('煤けた灰')
         self.invsys.add_valuable('歌う花')
 
-        ###サウンドセット ####2023-11-05 未実装
-        # self.make_music()
-        self.play_music()
+        ###シーンの切り替わりに合わせて、BGMを選択するための変数
+        self.prescene = 9
+        # self.nowscene = self.gamestate.scene
+
+        ### オブジェクトの自動移動中判断用変数
+        self.object_pos_update_frames = 0
+
+        # self.play_music()
         #game実行
         pyxel.run(self.update, self.draw)
 
     def update(self):
+        self.checkSceneMusic()
         ###PLAYモード共通
         if (self.gamestate.mode == C_PLAY):
             if(self.gamestate.door_transition):
                 for particle in door_tran_particles[0]:
                     particle.update()
             else:
+                ### object_pos_update_framesが残ってるとき、デクリメント
+                if self.object_pos_update_frames > 0:
+                    self.object_pos_update_frames -= 1
                 ### gamestate更新
                 # self.gamestate.scenario[0][0] = self.gamestate.scene
                 self.gamestate.scenetimer += 1
@@ -266,6 +278,10 @@ class MyApp:
                 ###プレーヤーオブジェクトとその他のcheckable（＝調べることが可能な）オブジェクト群の位置関係を確認し、
                 ###最も近い位置にあるcheckableオブジェクトとの向きを含む隣接状態を捕捉。
                 self.updateObjectsPositionCheck()
+                ###特定のオブジェクト種別に対し予め関連する手元の保持アイテム数をチェックしておく。
+                if self.nearest_obj.__class__.__name__ in("Atari"):
+                    ### 手元の保持アイテム数をチェックし、最も近い位置にある特定番号オブジェクトの返却テキストフラグを操作する
+                    self.checkInvSysItem(self.nearest_obj)
                 ###入力検知の遅延用カウンタを更新（ボタン打鍵の瞬間の連続検知を防ぐ）
                 if(self.inputdelay_cnt > 0):
                     self.inputdelay_cnt -= 1
@@ -303,11 +319,13 @@ class MyApp:
                     self.updateWoodScene()
                 elif (self.gamestate.scene == C_SCENE_GOLD):
                     self.updateGoldScene()
-                # elif (self.gamestate.scene == C_SCENE_SOIL):
-                #     self.updateSoilScene()
+                elif (self.gamestate.scene == C_SCENE_SOIL):
+                    self.updateSoilScene()
                 elif (self.gamestate.scene == C_SCENE_SUN):
                     self.updateSunScene()
-                
+                # elif (self.gamestate.scene == C_SCENE_END):
+                    # self.updateEndScene()
+    
         ###MENUモード共通 ================================
         if (self.gamestate.mode == C_MENU):
             # self.invsys.update()                    
@@ -319,13 +337,34 @@ class MyApp:
                 ###ボタン入力の検知
                 self.updateBtnInputCheck()
 
+        if (self.gamestate.mode == C_DEAD):
+            ###入力検知の遅延用カウンタ（ボタン打鍵の瞬間の連続検知を防ぐ）
+            if(self.inputdelay_cnt > 0):
+                self.inputdelay_cnt -= 1
+            ###スクロールが働いていないときだけボタン入力を検知する
+            if((self.inputdelay_cnt == 0)and(self.scroll_direction == 0)):
+                ###ボタン入力の検知
+                self.updateBtnInputCheck()
+
+    ### AtariオブジェクトのVisibleフラグを操作する
+    def switchAtariVisible(self, obj_no_list, flg):
+        for atari in ataris:
+            if atari.obj_no in obj_no_list:
+                atari.is_visible = flg
+
+    ### DoorオブジェクトのVisibleフラグを操作する
+    def switchDoorVisible(self, flg):
+        for door in doors:
+                door.visible = flg
+
     def check_collision(self, base_elem, target_list):
         for target in target_list:
             self.playerUpdateColisionCheckAndScrollCancel(base_elem, target)
 
     def draw(self):
         if(self.gamestate.mode == C_PLAY):
-            if(self.gamestate.door_transition):
+            ###ドアトランジションが有効で、オブジェクト自動移動中フレーム残がなく、接触中のオブジェクトがDoorかつ接触中オブジェクトとの距離が10以下のとき
+            if(self.gamestate.door_transition) :
                 if self.gamestate.door_transition_radius < self.gamestate.door_transition_radius_max:
                     ###中心から黒の円を描画。
                     pyxel.circ(150, 150, self.gamestate.door_transition_radius, 0)
@@ -350,15 +389,23 @@ class MyApp:
                 if self.nearest_obj.__class__.__name__ in("Character", "Atari", "Door", "Jerry"):
                     if self.nearest_obj.flg_reaction:
                         ###フキダシ表示
-                        pyxel.blt(self.player.draw_x, self.player.draw_y -14, 0, 72, 0, 16, 16, 3)
-                        if self.nearest_obj.__class__.__name__ in("Atari"):
-                            ###フキダシ内のアイコン表示（？マーク）
-                            # pyxel.blt(self.player.x +5, self.player.y -12, 0, 72, 16, 7, 10, 3)
-                            pyxel.blt(self.player.draw_x +5, self.player.draw_y -12, 0, 72, 16 + 10 * (pyxel.frame_count // 6 % 3), 7, 10, 3)
-                        if self.nearest_obj.__class__.__name__ in("Character", "Door", "Jerry"):
-                            ###フキダシ内のアイコン表示（！マーク）
-                            # pyxel.blt(self.player.x +6, self.player.y -12, 0, 79, 16, 4, 10, 3)
-                            pyxel.blt(self.player.draw_x +6, self.player.draw_y -12, 0, 79, 16 + 10 * (pyxel.frame_count // 6 % 3), 4, 10, 3)
+                        ### テキスト表示中ではないときだけ
+                        if self.pressed_space_checking == False:
+                            if self.nearest_obj.__class__.__name__ in("Atari"):
+                                if self.nearest_obj.is_visible:
+                                    pyxel.blt(self.player.draw_x, self.player.draw_y -14, 0, 72, 0, 16, 16, 3)
+                                    ###フキダシ内のアイコン表示（？マーク）
+                                    pyxel.blt(self.player.draw_x +5, self.player.draw_y -12, 0, 72, 16 + 10 * (pyxel.frame_count // 6 % 3), 7, 10, 3)
+                            if self.nearest_obj.__class__.__name__ in("Character", "Jerry"):
+                                pyxel.blt(self.player.draw_x, self.player.draw_y -14, 0, 72, 0, 16, 16, 3)
+                                ###フキダシ内のアイコン表示（！マーク）
+                                pyxel.blt(self.player.draw_x +6, self.player.draw_y -12, 0, 79, 16 + 10 * (pyxel.frame_count // 6 % 3), 4, 10, 3)
+                            if self.nearest_obj.__class__.__name__ in("Door"):
+                                ###ドアが可視状態のときのみ、フキダシ内のアイコン表示（！マーク）
+                                if (self.nearest_obj.visible):
+                                    pyxel.blt(self.player.draw_x, self.player.draw_y -14, 0, 72, 0, 16, 16, 3)
+                                    ###フキダシ内のアイコン表示（！マーク）
+                                    pyxel.blt(self.player.draw_x +6, self.player.draw_y -12, 0, 79, 16 + 10 * (pyxel.frame_count // 6 % 3), 4, 10, 3)
                 ###前景＋メニューエリアの描画
                 self.drawFT(wk_player_moving)
                 ###スペースキー打鍵chkフラグON状態のときに、捕捉中のdisptimesに分けて、メッセージを画面表示する。
@@ -366,10 +413,18 @@ class MyApp:
         elif(self.gamestate.mode == C_MENU):
             ###Menu画面の描画
             self.drawMenu()
-            ###デモタイトル表示
-            pyxel.rect(6, 2, 38, 25, 1)
-            self.bdf2.draw_text(10, 2, self.getModeName(), 7) 
-            self.bdf2.draw_text(10,14, self.getSceneName(), 7)            
+        ###デバッグ用デモタイトル表示
+        ####pyxel.rect(6, 2, 42, 37, 1)
+        ####self.bdf2.draw_text(10, 2, self.getModeName(), 7) 
+        ####self.bdf2.draw_text(10,14, self.getSceneName(), 7)            
+        ####self.bdf2.draw_text(10,26, self.getScenarioAndBranchNum(), 7)    
+        elif(self.gamestate.mode == C_DEAD):
+            ### 画面を真っ黒にする
+            pyxel.cls(0)
+            ### 中央に「GAME OVER」を表示
+            pyxel.text(150 - 30, 150 - 4, "GAME OVER", 7)
+            ### 「’R’キーで再開」を表示
+            pyxel.text(150 - 30, 150 + 4, "'R' to restart", 7)
 
     ####-------------------------------------------------------------------------------
     def hensuSengen(self):
@@ -404,6 +459,8 @@ class MyApp:
             self.position_buffer = 10 ###隣接状態と判定する境界エリア幅
             ###最も近いオブジェクトを格納する変数
             self.nearest_obj = None
+            ###最も近いオブジェクトとの距離を格納する変数
+            self.nearest_obj_distancetoPlayer = 999
             ###フキダシ表示用の座標変数
             self.fukidashi_nearest_obj_x = 0
             self.fukidashi_nearest_obj_y = 0
@@ -458,6 +515,9 @@ class MyApp:
             self.sand_frame = [0, 0, 0, 0] #4frame周期
             self.girlsidx01 = 0
             self.girlsidx02 = 0
+            ###SCENE:SOIL用
+            self.butterflies = list()
+            self.sunlines = list()
             ###テスト用(パーティクルシステム)
             self.timer_for_psys = 0
             ###SCENE:WATER用
@@ -488,38 +548,43 @@ class MyApp:
                 (self.gamestate.scene == C_SCENE_WOOD) or \
                 (self.gamestate.scene == C_SCENE_GOLD) or \
                 (self.gamestate.scene == C_SCENE_SOIL) or \
-                (self.gamestate.scene == C_SCENE_SUN):
+                (self.gamestate.scene == C_SCENE_SUN) or  \
+                (self.gamestate.scene == C_SCENE_END):
                     #プレイヤーオブジェクトを生成
                     self.player = Character(1,30,150,3,True)
                     characters.append(self.player) ###キャラクター・オブジェクトリストに追加
                     ### 画面上部から移動可能領域までのマージンを再設定
-                    if (self.gamestate.scene in(C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN)):
+                    if (self.gamestate.scene in(C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN, C_SCENE_END)):
                         self.player.able_moving_top = 16 * 2 - 8
                     if (self.gamestate.scene == C_SCENE_WOOD):
                         self.player.able_moving_top = 100
                     ### ドアオブジェクトの生成
-                    if (self.gamestate.scene in(C_SCENE_MOON, C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_WOOD, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN)):
+                    if (self.gamestate.scene in(C_SCENE_MOON, C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_WOOD, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN, C_SCENE_END)):
                         self.generateDoor()
                     ###月オブジェクトを生成
                     if (self.gamestate.scene == C_SCENE_MOON):
                         self.generateUniqueObjectsInMoon()
-                    ###球内をさまよう光点の追加
+                    ###火オブジェクトを生成
                     if (self.gamestate.scene == C_SCENE_FIRE):
                         self.generateUniqueObjectsInFire()
+                    ###水オブジェクトを生成
                     if (self.gamestate.scene == C_SCENE_WATER):
                         self.generateUniqueObjectsInWater()
                     ###木オブジェクトを生成
                     if (self.gamestate.scene == C_SCENE_WOOD):
                         self.generateUniqueObjectsInWood()
-                    ###象徴するオブジェクトを生成
+                    ###金オブジェクトを生成
                     if (self.gamestate.scene == C_SCENE_GOLD):
                         self.generateUniqueObjectsInGold()
                     ###土オブジェクトを生成
                     if (self.gamestate.scene == C_SCENE_SOIL):
                         self.generateUniqueObjectsInSoil()
-                    ###太陽オブジェクトを生成
+                    ###日オブジェクトを生成
                     if (self.gamestate.scene == C_SCENE_SUN):
                         self.generateUniqueObjectsInSun()
+                    ###エンディングオブジェクトを生成
+                    if (self.gamestate.scene == C_SCENE_END):
+                        self.generateUniqueObjectsInEnd()
 
     def generateUniqueObjectsInHome(self):
         #プレイヤーオブジェクトを生成
@@ -535,31 +600,56 @@ class MyApp:
         self.atari002 = Atari(333, 8 * 17 -5, 1, C_SCENE_HOME, C_VISIBLE) ## バス停
         self.atari003 = Atari(274, 8 * 17 -5, 2, C_SCENE_HOME, C_VISIBLE) ## 看板（小）
         self.atari004 = Atari(450, 220,       3, C_SCENE_HOME, C_INVISIBLE) ## 猫
+        self.atari025   = Atari(15, 135, 25, C_SCENE_HOME, C_VISIBLE) ## 神棚
         ###背景用当たり判定リストに追加
         ataris.append(self.atari001)
         ataris.append(self.atari002)
         ataris.append(self.atari003)
         ataris.append(self.atari004)
+        ataris.append(self.atari025)
 
     def generateUniqueObjectsInMoon(self):
         ###月オブジェクトを生成
         self.moon01 = Moon(150, 70, 50, 0.001)
         self.moons.append(self.moon01)
         ###キャラクターオブジェクトを生成
-        self.charactor01 = Character(2,210,160,2,False) #Michi
+        self.charactor01 = Character(2,320,160,2,False) #Michi
         characters.append(self.charactor01) ###キャラクター・オブジェクトリストに追加
+        #キャラクターオブジェクトを生成
+        self.charactor02 = Character(0,130,160,2,False) #Kana
+        characters.append(self.charactor02) ###キャラクター・オブジェクトリストに追加
         ###背景用当たり判定インスタンス群
-        self.atari007 = Atari(544, 168, 7, C_SCENE_MOON, C_VISIBLE) ## 木の幹03
-        self.atari008 = Atari(563, 168, 8, C_SCENE_MOON, C_VISIBLE) ## 木の幹04
+        self.atari007   = Atari(544, 168,  7, C_SCENE_MOON, C_VISIBLE) ## 木の幹03
+        self.atari008   = Atari(563, 168,  8, C_SCENE_MOON, C_VISIBLE) ## 木の幹04
+        self.atari02401 = Atari( 30, 170, 24, C_SCENE_MOON, C_VISIBLE) ## 灯籠01
+        self.atari02402 = Atari(150, 170, 24, C_SCENE_MOON, C_VISIBLE) ## 灯籠01
+        self.atari02403 = Atari(270, 170, 24, C_SCENE_MOON, C_VISIBLE) ## 灯籠01
+        self.atari02404 = Atari(390, 170, 24, C_SCENE_MOON, C_VISIBLE) ## 灯籠01
+
+        self.atari025   = Atari(215, 165, 25, C_SCENE_MOON, C_VISIBLE) ## 神棚
+        
         ###背景用当たり判定リストに追加
         ataris.append(self.atari007)
         ataris.append(self.atari008)
+        ataris.append(self.atari02401)
+        ataris.append(self.atari02402)
+        ataris.append(self.atari02403)
+        ataris.append(self.atari02404)
+        ataris.append(self.atari025)
     
     def generateUniqueObjectsInFire(self):
         ###蛍オブジェクトを生成
         self.points3d.append(Point3D(center_x=150, center_y=150, center_z=0, radius=100, num_points=40, speed_low=2, speed_high=4, life_low=50, life_high=100, randini=True, pallete=0, cacheflg=False, scene=self.gamestate.scene))
         self.atari010 = Atari(120, 130, 10, C_SCENE_FIRE, C_INVISIBLE) ## 
         ataris.append(self.atari010)
+        self.atari025 = Atari(215, 130, 25, C_SCENE_FIRE, C_VISIBLE) ## 神棚
+        ataris.append(self.atari025)
+        ###さざれ石オブジェクトを生成
+        self.atari026 = Atari(320, 120, 26, C_SCENE_FIRE, C_VISIBLE) ## さざれ石
+        ataris.append(self.atari026)
+        #キャラクターオブジェクトを生成
+        self.charactor02 = Character(0,230,160,2,False) #Kana
+        characters.append(self.charactor02) ###キャラクター・オブジェクトリストに追加
         ###ランタンオブジェクトの生成
         lantan_num = 15
         for _ in range(lantan_num):
@@ -589,8 +679,29 @@ class MyApp:
         ###くらげ生成
         self.jerry01 = Jerry(168,116,90)
         characters.append(self.jerry01) ###キャラクター・オブジェクトリストに追加
+        #キャラクターオブジェクトを生成
+        self.charactor02 = Character(0,130,160,2,False) #Kana
+        characters.append(self.charactor02) ###キャラクター・オブジェクトリストに追加
         ###水シーン用のTreeオブジェクト(drawFT用)を生成
         self.water_trees = list()
+        self.atari025   = Atari(235, 135, 25, C_SCENE_WATER, C_VISIBLE) ## 神棚
+        ataris.append(self.atari025)
+        # アイテム取得用Atariオブジェクトをセット（デフォルトでinvisible）
+        self.atari027 = Atari(100, 120, 27, C_SCENE_WATER, C_INVISIBLE) ### 水ステージ探しもの用（ハズレ）
+        self.atari028 = Atari(260, 120, 28, C_SCENE_WATER, C_INVISIBLE) ### 水ステージ探しもの用（ハズレ：体力減）
+        self.atari029 = Atari(380, 120, 29, C_SCENE_WATER, C_INVISIBLE) ### 水ステージ探しもの用（クラゲずかん）
+        self.atari030 = Atari(470, 120, 30, C_SCENE_WATER, C_INVISIBLE) ### 水ステージ探しもの用（古い手鏡）
+        self.atari031 = Atari(550, 120, 31, C_SCENE_WATER, C_INVISIBLE) ### 水ステージ探しもの用（サファイアのイヤリング）
+        self.atari032 = Atari( 80, 200, 32, C_SCENE_WATER, C_INVISIBLE) ### 水ステージ探しもの用（小さなガラス瓶）
+        self.atari033 = Atari(220, 230, 33, C_SCENE_WATER, C_INVISIBLE) ### 甘い水の実
+        ataris.append(self.atari027)
+        ataris.append(self.atari028)
+        ataris.append(self.atari029)
+        ataris.append(self.atari030)
+        ataris.append(self.atari031)
+        ataris.append(self.atari032)
+        ataris.append(self.atari033)
+        # 木の生成
         self.water_trees.append(WaterTree(60,10))
         self.water_trees.append(WaterTree(90,8))
         self.water_trees.append(WaterTree(140,9))
@@ -642,6 +753,14 @@ class MyApp:
 
 
     def generateUniqueObjectsInWood(self):
+        ###キャラクターオブジェクトを生成
+        self.charactor01 = Character(5,374,95,2,False) #GIRAN
+        self.charactor01.collision_width = 16
+        self.charactor01.collision_height = 8
+        characters.append(self.charactor01) ###キャラクター・オブジェクトリストに追加
+        #キャラクターオブジェクトを生成
+        self.charactor02 = Character(0,130,160,2,False) #Kana
+        characters.append(self.charactor02) ###キャラクター・オブジェクトリストに追加
         ###木オブジェクトを生成 : x=50, y=100, 葉の数=90, 茂みの半径=30
         self.tree01 = Tree(150, 100, 110, 30)
         self.tree02 = Tree(250, 100, 155, 40)
@@ -666,9 +785,11 @@ class MyApp:
         ###背景用当たり判定インスタンス群
         self.atari005 = Atari(160, 167, 4, C_SCENE_WOOD, C_INVISIBLE) ## 木の幹01
         self.atari006 = Atari(260, 167, 5, C_SCENE_WOOD, C_INVISIBLE) ## 木の幹02
+        self.atari025   = Atari(535, 135, 25, C_SCENE_WOOD, C_VISIBLE) ## 神棚
         ###背景用当たり判定リストに追加
         ataris.append(self.atari005)
         ataris.append(self.atari006)
+        ataris.append(self.atari025)
         ###草オブジェクトを生成 : x=10, y=230, 距離=150, 最小の高さ=20, 最大の高さ=50, 草の本数=30
         self.grass01 = Grass(0, 240, 600, 20, 60, 150)
         self.grasses.append(self.grass01)
@@ -720,6 +841,14 @@ class MyApp:
         )
             
     def generateUniqueObjectsInGold(self):
+        ###キャラクターオブジェクトを生成
+        self.charactor01 = Character(6,310,95,2,False) #LUV
+        self.charactor01.collision_width = 16
+        self.charactor01.collision_height = 16
+        characters.append(self.charactor01) ###キャラクター・オブジェクトリストに追加
+        #キャラクターオブジェクトを生成
+        self.charactor02 = Character(0,130,160,2,False) #Kana
+        characters.append(self.charactor02) ###キャラクター・オブジェクトリストに追加
         self.visualizer  = EchoChamberVisualizer(x_center=65,  y_center=200, r=30, treeangle=30, max_depth=10, polygon_sides=6, external=False)
         self.visualizer2 = EchoChamberVisualizer(x_center=450, y_center=200, r=30, treeangle=30, max_depth=10, polygon_sides=8, external=True)
         self.visualizer3 = EchoChamberVisualizer(x_center=320, y_center= 80, r=30, treeangle=30, max_depth=10, polygon_sides=10, external=False)
@@ -737,18 +866,84 @@ class MyApp:
         point_c = EllipticalOrbit(point_b.x, point_b.y, 20, 20, 0, 0.05, pyxel.COLOR_GREEN, parent=point_b)
         self.elliptical_orbits.append(point_c)
         self.elliptical_orbits.append(point_b)
+
         ###背景用当たり判定インスタンス群
-        # self.atari009 = Atari(self.elliptical_orbits[0].pjtx, self.elliptical_orbits[0].pjty, 7, C_SCENE_GOLD, C_VISIBLE) ## girls 
-        self.atari009 = Atari(140, 145, 7, C_SCENE_GOLD, C_VISIBLE) ## girls
-        self.atari009.collision_width = 8
-        self.atari009.collision_height = 8
-        ###背景用当たり判定リストに追加
-        ataris.append(self.atari009)
+        # # self.atari009 = Atari(self.elliptical_orbits[0].pjtx, self.elliptical_orbits[0].pjty, 7, C_SCENE_GOLD, C_VISIBLE) ## girls 
+        # self.atari009 = Atari(140, 145, 9, C_SCENE_GOLD, C_VISIBLE) ## girls
+        # self.atari009.collision_width = 8
+        # self.atari009.collision_height = 8
+        # ###背景用当たり判定リストに追加
+        # ataris.append(self.atari009)
+        self.atari022 = Atari(210, 116, 22, C_SCENE_GOLD, C_INVISIBLE) ## 宝石
+        self.atari023 = Atari(514, 120, 23, C_SCENE_GOLD, C_INVISIBLE) ## 剣
+        self.atari025   = Atari(175, 120, 25, C_SCENE_GOLD, C_VISIBLE) ## 神棚
+        ataris.append(self.atari022)
+        ataris.append(self.atari023)
+        ataris.append(self.atari025)        
+    
        
     def generateUniqueObjectsInSoil(self):
         ###キャラクターオブジェクトを生成
         self.charactor01 = Character(7,210,160,2,False) #LIKI
         characters.append(self.charactor01) ###キャラクター・オブジェクトリストに追加
+        #キャラクターオブジェクトを生成
+        self.charactor02 = Character(0,255,177,2,False) #Kana
+        characters.append(self.charactor02) ###キャラクター・オブジェクトリストに追加
+        ###蝶を生成
+        self.butterfly01 = Butterfly(100, 120, 300, 200, 0)
+        self.butterfly02 = Butterfly(200, 140, 400, 250, 1)
+        self.butterfly03 = Butterfly(300, 110, 500, 200, 1)
+        self.butterfly04 = Butterfly( 50, 130, 350, 200, 0)
+        self.butterfly05 = Butterfly(340, 130, 580, 220, 1)
+        self.butterfly06 = Butterfly(450, 150, 590, 240, 0)
+        
+        self.butterflies.append(self.butterfly01)
+        self.butterflies.append(self.butterfly02)
+        self.butterflies.append(self.butterfly03)
+        self.butterflies.append(self.butterfly04)
+        self.butterflies.append(self.butterfly05)
+        self.butterflies.append(self.butterfly06)
+        
+
+        ###MovingLineオブジェクトを生成
+        self.movinglines01 = MovingLines(180,-240,110,230,60,30,18,[13, 7, 15, 10],150,230)
+        self.movinglines02 = MovingLines(465,-260,395,230,70,30,20,[13, 7, 15, 10],180,250)
+        self.movinglines03 = MovingLines(565,-260,495,230,70,30,11,[13, 7, 15, 10],170,230)
+        self.sunlines.append(self.movinglines01)
+        self.sunlines.append(self.movinglines02)
+        self.sunlines.append(self.movinglines03)
+
+        self.atari016 = Atari( 32, 165, 16, C_SCENE_SOIL, C_INVISIBLE) ##柱
+        self.atari017 = Atari(182, 165, 16, C_SCENE_SOIL, C_INVISIBLE) ##柱
+        self.atari018 = Atari(292, 165, 16, C_SCENE_SOIL, C_INVISIBLE) ##柱
+        self.atari019 = Atari(442, 165, 16, C_SCENE_SOIL, C_INVISIBLE) ##柱
+        self.atari020 = Atari(572, 165, 16, C_SCENE_SOIL, C_INVISIBLE) ##柱
+        self.atari021 = Atari( 55, 130, 17, C_SCENE_SOIL, C_INVISIBLE) ##犬
+        ###墓石の墓標
+        self.atari022 = Atari(100, 118, 18, C_SCENE_SOIL, C_VISIBLE) ##墓石 1
+        self.atari023 = Atari(160, 118, 19, C_SCENE_SOIL, C_VISIBLE) ##墓石 2
+        self.atari024 = Atari(260, 118, 20, C_SCENE_SOIL, C_VISIBLE) ##墓石 3
+        self.atari025 = Atari(360, 118, 21, C_SCENE_SOIL, C_VISIBLE) ##墓石 4
+
+        self.atari035   = Atari(535, 120, 25, C_SCENE_SOIL, C_VISIBLE) ## 神棚
+
+        ###背景用当たり判定リストに追加
+        ataris.append(self.atari016)
+        ataris.append(self.atari017)
+        ataris.append(self.atari018)
+        ataris.append(self.atari019)
+        ataris.append(self.atari020)
+        ataris.append(self.atari021)
+        ###墓石の墓標
+        ataris.append(self.atari022)
+        ataris.append(self.atari023)
+        ataris.append(self.atari024)
+        ataris.append(self.atari025)
+        ###神棚
+        ataris.append(self.atari035)
+
+
+
 
     def generateUniqueObjectsInSun(self):
         ###パーティクルシステムを生成
@@ -778,16 +973,42 @@ class MyApp:
             direction=7
         )
         ###背景用当たり判定インスタンス群
-        self.atari007 = Atari(320, 130, 6, C_SCENE_SUN, C_INVISIBLE) ## ストーブ＆ヤカン 
-        self.atari008 = Atari(320, 135, 6, C_SCENE_SUN, C_INVISIBLE) ## 当たり判定の拡張のためのダミー
+        self.atari007 = Atari(320, 130,  6, C_SCENE_SUN, C_INVISIBLE) ## ストーブ＆ヤカン 
+        self.atari008 = Atari(320, 135,  6, C_SCENE_SUN, C_INVISIBLE) ## 当たり判定の拡張のためのダミー
+        self.atari011 = Atari(507, 130, 11, C_SCENE_SUN, C_VISIBLE) ## 本 
+        self.atari012 = Atari( 25, 125, 12, C_SCENE_SUN, C_VISIBLE) ## アイアンシェルフ
+        self.atari013 = Atari(100, 120, 13, C_SCENE_SUN, C_INVISIBLE) ## ブルー
+        self.atari014 = Atari( 80, 145, 14, C_SCENE_SUN, C_INVISIBLE) ##積んだ本 
+        self.atari015 = Atari( 80, 141, 14, C_SCENE_SUN, C_INVISIBLE) ##当たり判定拡張のためのダミー 
+        self.atari025   = Atari(230, 120, 25, C_SCENE_SUN, C_VISIBLE) ## 神棚
         ###背景用当たり判定リストに追加
         ataris.append(self.atari007)
         ataris.append(self.atari008)
+        ataris.append(self.atari011)
+        ataris.append(self.atari012)
+        ataris.append(self.atari013)
+        ataris.append(self.atari014)
+        ataris.append(self.atari015)
+        ataris.append(self.atari025)
+
+        #キャラクターオブジェクトを生成
+        self.charactor02 = Character(0,130,160,2,False) #Kana
+        characters.append(self.charactor02) ###キャラクター・オブジェクトリストに追加
+    
+    def generateUniqueObjectsInEnd(self):
+        ###キャラクターオブジェクトを生成
+        self.charactor01 = Character(11,150,160,2,False)
+        self.charactor01.collision_width = 32
+        self.charactor01.collision_height = 28
+        characters.append(self.charactor01) ###キャラクター・オブジェクトリストに追加
+        #キャラクターオブジェクトを生成
+        self.charactor02 = Character(0,40,160,2,False) #Kana
+        characters.append(self.charactor02) ###キャラクター・オブジェクトリストに追加
 
     def deleteObjectsDependingOnScene(self):
         ###PLAYモードにおけるシーン別オブジェクト削除
         if (self.gamestate.mode == C_PLAY):
-            if (self.gamestate.scene in(C_SCENE_HOME, C_SCENE_MOON, C_SCENE_FIRE, C_SCENE_FIRE ,C_SCENE_WATER, C_SCENE_WOOD, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN)):
+            if (self.gamestate.scene in(C_SCENE_HOME, C_SCENE_MOON, C_SCENE_FIRE, C_SCENE_FIRE ,C_SCENE_WATER, C_SCENE_WOOD, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN, C_SCENE_END)):
                 ###Doorオブジェクトを削除
                 doors.clear()
                 ###キャラクターオブジェクトを削除
@@ -808,15 +1029,19 @@ class MyApp:
             if (self.gamestate.scene == C_SCENE_GOLD):
                 self.elliptical_orbits.clear()
                 self.segments.clear()
+            if (self.gamestate.scene == C_SCENE_SOIL):
+                self.butterflies.clear()
+                self.sunlines.clear()
             if (self.gamestate.scene == C_SCENE_SUN):
                 self.psys_instances.clear()  
 
     def generateDoor(self):
         if (self.gamestate.mode == C_PLAY):
             if (self.gamestate.scene == C_SCENE_HOME):
+                scenario, branch = self.gamestate.scenario[0][1], self.gamestate.scenario[0][2]
                 ###Door開放管理配列に基づいて、Doorオブジェクトを生成。Doorリストに追加。
                 if self.gamestate.door_open_array[0]:
-                    self.door00 = Door( 50,96,0,0)
+                    self.door00 = Door( 50,96,8,0)
                     doors.append(self.door00)
                 if self.gamestate.door_open_array[1]:
                     self.door01 = Door( 196 -35,96,1,0)
@@ -826,6 +1051,11 @@ class MyApp:
                     doors.append(self.door02)
                 if self.gamestate.door_open_array[3]:
                     self.door03 = Door( 296 -3,96,3,0)
+                    ## 部屋内部の扉の表示状態を設定
+                    if scenario == 3 and branch == 0:
+                        self.door03.visible = False
+                    if (scenario >= 3 and branch >= 9) or (scenario >= 4):
+                        self.door03.visible = True
                     doors.append(self.door03)
                 if self.gamestate.door_open_array[4]:
                     self.door04 = Door( 396,96,4,0)
@@ -839,7 +1069,7 @@ class MyApp:
                 if self.gamestate.door_open_array[7]:
                     self.door07 = Door( 546,96,7,0)
                     doors.append(self.door07)
-                
+
             ###HOMEへのドアを設置
             # if (self.gamestate.scene == C_SCENE_MOON):
             if (self.gamestate.scene == C_SCENE_MOON):
@@ -850,12 +1080,25 @@ class MyApp:
             if (self.gamestate.scene in(C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_WOOD, C_SCENE_GOLD)):
                 ###Doorオブジェクトを生成
                 self.door01 = Door(450,94,0,3)
+                self.door01.visible = True
                 ###Doorオブジェクトリストに追加
                 doors.append(self.door01)
-            # if (self.gamestate.scene in(C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_GOLD, C_SCENE_WOOD, C_SCENE_SOIL, C_SCENE_SUN)):
-            if (self.gamestate.scene in(C_SCENE_SOIL, C_SCENE_SUN)):
+            if (self.gamestate.scene == C_SCENE_SOIL):
+                ###Doorオブジェクトを生成
+                self.door01 = Door(475,94,0,3)
+                self.door01.visible = True
+                ###Doorオブジェクトリストに追加
+                doors.append(self.door01)
+            if (self.gamestate.scene == C_SCENE_SUN):
                 ###Doorオブジェクトを生成
                 self.door01 = Door(450,94,0,3)
+                self.door01.visible = False
+                ###Doorオブジェクトリストに追加
+                doors.append(self.door01)
+            if (self.gamestate.scene == C_SCENE_END):
+                ###Doorオブジェクトを生成
+                self.door01 = Door(475,94,0,3)
+                self.door01.visible = True
                 ###Doorオブジェクトリストに追加
                 doors.append(self.door01)
 
@@ -984,12 +1227,20 @@ class MyApp:
             self.camera.apply(segment)
         ###echo chamberのupdate
         if len(self.segments) > 0:
-            if pyxel.frame_count % 15 == 0:
-                for segment in self.segments:
-                    segment.angle_offset += 15
+            # if pyxel.frame_count % 15 == 0:
+            #     for segment in self.segments:
+            #         segment.angle_offset += 15
             for segment in self.segments:
                 segment.update()
-            
+    
+    def updateSoilScene(self):
+        #self.butterfly01.update()
+        if len(self.butterflies) > 0:
+            for butterfly in self.butterflies:
+                butterfly.update()
+        if len(self.sunlines) > 0:
+            for sunline in self.sunlines:
+                sunline.update()
 
     def updateSunScene(self):
         ###パーティクルシステムのupdate
@@ -997,6 +1248,10 @@ class MyApp:
         if len(self.psys_instances) > 0:
             for psys in self.psys_instances:
                 psys.update_particles(self.camera.x, 1)
+    
+    # def updateEndScene(self):
+
+
 
     def updateParticleSystems(self):
         #####テスト（パーティクルシステム）
@@ -1135,7 +1390,7 @@ class MyApp:
                             hint_text = ["ひんやりとして肌寒い。幾何学模様が空間を漂っている。"]
                     elif scene == C_SCENE_SOIL:
                         if player.character_no == C_CHARA_WOLF:
-                            hint_text = ["物悲しい雰囲気だ。"]
+                            hint_text = ["厳かな雰囲気だ。"]
                     elif scene == C_SCENE_SUN:
                         if player.character_no == C_CHARA_WOLF:
                             hint_text = ["部屋の中に陽光が差している。窓の外は雪が吹きつけている。"]
@@ -1153,26 +1408,30 @@ class MyApp:
     ###gamestateのsceneの値に応じて対応する変数名の文字列を返す ★DEBUG用
     def getSceneName(self):
         if(self.gamestate.scene == C_SCENE_HOME):
-            return "HOME"
+            return "HOME:0"
         if(self.gamestate.scene == C_SCENE_MOON):
-            return "MOON"
+            return "MOON:1"
         if(self.gamestate.scene == C_SCENE_FIRE):
-            return "FIRE"
+            return "FIRE:2"
         if(self.gamestate.scene == C_SCENE_WATER):
-            return "WATER"
+            return "WATER:3"
         if(self.gamestate.scene == C_SCENE_WOOD):
-            return "WOOD"
+            return "WOOD:4"
         if(self.gamestate.scene == C_SCENE_GOLD):
-            return "GOLD"
+            return "GOLD:5"
         if(self.gamestate.scene == C_SCENE_SOIL):
-            return "SOIL"
+            return "SOIL:6"
         if(self.gamestate.scene == C_SCENE_SUN):
-            return "SUN"
+            return "SUN:7"
         if(self.gamestate.scene == C_SCENE_END):
-            return "END"
+            return "END:08"
         if(self.gamestate.scene == C_SCENE_MENU):
             return "MENU"
-
+        
+    ###gamestateのシナリオ番号（到達済みシーン）と設定中ブランチとの文字列を返す ★DEBUG用
+    def getScenarioAndBranchNum(self):
+        return str(self.gamestate.scenario[0][1]) + "-" + str(self.gamestate.scenario[0][2])
+        
     ###gamestateのmodeの値に応じて対応する変数名の文字列を返す ★DEBUG用
     def getModeName(self):
         if(self.gamestate.mode == C_PLAY):
@@ -1201,6 +1460,8 @@ class MyApp:
                 elif(self.gamestate.scene == C_SCENE_SUN): ###太陽の戸の場合、ひだまりの描写を行う
                     # self.drawMoonBG()
                     self.drawSunBG()
+                elif(self.gamestate.scene == C_SCENE_END): ###終の戸の場合、エンディングの描写を行う
+                    self.drawEndBG()
 
     def drawHomeBG(self):
         ###背景を塗りつぶし
@@ -1315,6 +1576,11 @@ class MyApp:
         ###丘の描画
         pyxel.bltm(-(8*9) - self.camera.x, 8 * 18, 0, 0, 8 * 125, 8 * 200, 8 * 16,0)
 
+        ###柵の描画(10回繰り返し)
+        for i in range(0, 40):
+            pyxel.blt(0 + i * 16 - self.camera.x, 172, 1, 32, 246, 16, 10, 0)
+        
+
         ###木の描画
         pyxel.bltm(530 - self.camera.x, 8 * 8, 0, 0, 8 * 144, 8 * 8, 8 * 16, 0)
 
@@ -1323,24 +1589,38 @@ class MyApp:
 
     def drawFireBG(self):
         pyxel.cls(0)
+        ###葉っぱ1
+        pyxel.blt( 23 - self.camera.x,  40, 1, 208, 80, 16, 16, 0)
+        pyxel.blt(127 - self.camera.x,  75, 1, 208, 80, 16, 16, 0)
+        pyxel.blt(161 - self.camera.x,  53, 1, 208, 80, 16, 16, 0)
+        pyxel.blt(428 - self.camera.x,  81, 1, 208, 80, 16, 16, 0)
+        pyxel.blt(529 - self.camera.x,  38, 1, 208, 80, 16, 16, 0)
+        ###葉っぱ2
+        pyxel.blt( 41 - self.camera.x,  87, 1, 224, 80, 16, 16, 0)
+        pyxel.blt(103 - self.camera.x,  39, 1, 224, 80, 16, 16, 0)
+        pyxel.blt(312 - self.camera.x,  52, 1, 224, 80, 16, 16, 0)
+        pyxel.blt(441 - self.camera.x,  69, 1, 224, 80, 16, 16, 0)
+
+        ###睡蓮
+        pyxel.blt(200 - self.camera.x,  40, 1, 224, 64, 16, 16, 0)
+        pyxel.blt(110 - self.camera.x,  65, 1, 208, 64, 16, 16, 0)
+        pyxel.blt(216 - self.camera.x,  58, 1, 208, 64, 16, 16, 0)
+        pyxel.blt(260 - self.camera.x,  43, 1, 224, 64, 16, 16, 0)
+        pyxel.blt(425 - self.camera.x,  98, 1, 208, 64, 16, 16, 0)
+
+        
         ###particleの描画
         if len(self.psys_instances) > 0:
             self.drawParticles()
         ###Lantanの描画
         for lantan in self.lantans:
             lantan.draw()
-        # ###橋（ガラス）の反射を斜め線で表現
-        # for i in range(0, 600, 4):
-        #     if i % 2 == 0:
-        #         pyxel.line(i -self.camera.x, 130, 3*i -420 -self.camera.x, 230, 13)
-        # ###橋をlineで描画
-        # pyxel.line(0, 130, 600, 130,  7) #橋の上の線
-        # pyxel.line(0, 131, 600, 131, 13) #橋の上の線
-        # #横線
-        # for i in range(132, 239):
-        #     if i % 3 == 0:
-        #         pyxel.line(0, i, 600, i, 13)
-        # pyxel.line(0, 230, 600, 230,  7) #橋の下の線
+        ###石柱（小）の描画（青）
+        for i in range(0, 42):
+            ###３００幅の画面外は描画しない
+            if(i * 16 - self.camera.x < 300):
+                pyxel.blt(13 + i * 16 - self.camera.x, 8 * 15, 1, 64, 240, 8, 16, 0)
+
         ###
         pyxel.blt(120 - self.camera.x, 130, 1, 96, 160 + 16*(pyxel.frame_count//8 % 4), 16, 16,0)
 
@@ -1354,7 +1634,7 @@ class MyApp:
         self.drawfish(0)
         ###波紋を指定区画内にランダムに描画
         # for i in range(0, 12):
-        for i in range(0, 10):
+        for i in range(0, 6):
             # カウンタが0になったらリセット
             if self.rain_draw_counter[i] == 0:
                 self.rainAxisColorReset(i)
@@ -1473,8 +1753,9 @@ class MyApp:
 
     def drawWaterFT(self):
         ###watertreesの描画
+        ###適用カメラに係数でパララックスをかける
         for watertree in self.water_trees:
-            watertree.draw(self.camera.x)
+            watertree.draw(self.camera.x * 1.1)
         ###fishの移動
         self.drawfish(1)
         ###particleの描画
@@ -1554,12 +1835,13 @@ class MyApp:
 
     def drawWoodBG(self):
         pyxel.cls(0) #1,5,12で基本背景色を設定
-        pyxel.rect(0, 0, 600, 80, 1)
-        pyxel.rect(0, 0, 600, 55, 5)
-        pyxel.rect(0, 0, 600, 35, 12)
+        # pyxel.rect(0, 0, 600, 80, 1)
+        # pyxel.rect(0, 0, 600, 55, 5)
+        # pyxel.rect(0, 0, 600, 35, 12)
         ###背景の木々
         # pyxel.blt( 0 - self.camera.x, 40, 2, 16 * 13.5, 0, 16 * 2.5, 16 * 3.5, 0)
-        # pyxel.blt(80 - self.camera.x, 60, 2, 16 * 13.5, 0, 16 * 2.5, 16 * 3.5, 0)
+        pyxel.bltm(0 - self.camera.x * 0.4, 8 * 4, 0, 8 * 0 , 8 * 216, 8 * 95, 8 * 8, 0)
+
         
         ###道路
         pyxel.bltm(-32 - self.camera.x,8 * 18,     2, 0, 8 * 52, 8 * 40 + self.camera.x + 32, 8 * 10,0)
@@ -1698,6 +1980,10 @@ class MyApp:
         pyxel.blt( 417 -self.camera.x*scroll_ratio3, 90,1,160,0,16*2,16*2,0)
         pyxel.blt( 505 -self.camera.x*scroll_ratio3, 85,1,160,0,16*2,16*2,0)
         pyxel.blt( 565 -self.camera.x*scroll_ratio3,105,1,160,0,16*2,16*2,0)
+        ###剣
+        pyxel.blt( 520 -self.camera.x*scroll_ratio3,110,1,176,32,8*2,8*3,3)
+        ###宝石
+        pyxel.blt( 210 -self.camera.x*scroll_ratio3,120,1,176,56,8*2,8*2,4)
         ### 落ちる砂の描画
         self.sand_frame[0] = (pyxel.frame_count) // 3 % 4
         self.sand_frame[1] = (pyxel.frame_count + 1) // 3 % 4
@@ -1749,10 +2035,66 @@ class MyApp:
                 pyxel.blt(x + k*2,y + 16 * j,2,72 + sand_i * 2,232,2,16,0)
 
     def drawSoilBG(self):
-        pyxel.cls(13)
+        # pyxel.cls(13)
+        ###タイルマップの指定
+        pyxel.bltm(0 -self.camera.x,0,0,0,8*160,8*75,8*32)
 
-        ###キャラクターの描画
-        # pyxel.blt(100 - self.camera.x,100,1,16,48,16,48,3)
+        soil_prllx_ratios = [0.92, 0.94, 0.96, 0.98, 1.00]
+        ###墓石の描画（ノーマル）
+        #1列目
+        for n in range(7):
+            if n in(2,3,4):
+                pyxel.blt(130 + n*20 -self.camera.x,  0, 2, 208, 168, 16, 16, 3)
+            else:
+                pyxel.blt(130 + n*20 -self.camera.x,  0, 2, 192, 168, 16, 16, 3)
+        #2列目
+        for n in range(9):
+            pyxel.blt(115 + n*20 -self.camera.x, 20, 2, 192, 168, 16, 16, 3)
+        #3列目
+        for n in range(12):
+            pyxel.blt(110 + n*20 -self.camera.x, 40, 2, 192, 168, 16, 16, 3)
+        #4列目
+        for n in range(14):
+            pyxel.blt( 90 + n*20 -self.camera.x, 60, 2, 192, 168, 16, 16, 3)
+        #5列目
+        for n in range(16):
+            pyxel.blt( 80 + n*20 -self.camera.x, 80, 2, 192, 168, 16, 16, 3)
+        #6列目
+        for n in range(18):
+            pyxel.blt( 70 + n*20 -self.camera.x,100, 2, 192, 168, 16, 16, 3)
+        #7列目
+        for n in range(20):
+            pyxel.blt( 60 + n*20 -self.camera.x,120, 2, 192, 168, 16, 16, 3)
+
+
+        ###犬の描画
+        x_dog = 55
+        y_dog = 136
+        ###犬頭部＋胴体
+        pyxel.blt(x_dog -self.camera.x, y_dog, 2, 136, 208, 16, 10, 3)
+        ###尻尾
+        if pyxel.frame_count // 3 % 2 == 0:
+            pyxel.blt(x_dog +15 -self.camera.x, y_dog +1, 2, 136, 218, 8, 6, 3)
+        elif pyxel.frame_count // 3 % 2 == 1:
+            pyxel.blt(x_dog +15 -self.camera.x, y_dog +1 , 2, 144, 218, 8, 6, 3)
+
+        ###playerのy位置が137以上のとき描画
+        if self.player.y > 137:
+            ###柱（手前列）
+            pyxel.bltm( 30 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+            pyxel.bltm(180 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+            pyxel.bltm(290 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+            pyxel.bltm(440 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+            pyxel.bltm(570 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+            ###屋根
+            pyxel.bltm(-20 -self.camera.x,  0, 0, 8*6,8*192,8*33,8*8,3)
+            pyxel.bltm(243 -self.camera.x,  0, 0, 8*6,8*192,8*33,8*8,3)
+            pyxel.bltm(506 -self.camera.x,  0, 0, 8*6,8*192,8*33,8*8,3)
+
+            ###sunlinesの描画
+            if len(self.sunlines) > 0:
+                for sunline in self.sunlines:
+                    sunline.draw(self.camera.x, 0, self.player.position_y)
 
     def drawSunBG(self):
         ##pyxel.cls(15)
@@ -1816,6 +2158,8 @@ class MyApp:
         pyxel.bltm(8* 15 -2 - self.camera.x,ceil_height + window_height + 15,0,8*36,8*104,8*10,8*8,0)
         pyxel.bltm(8* 25 -3 - self.camera.x,ceil_height + window_height + 15,0,8*36,8*104,8*10,8*8,0)
         pyxel.bltm(8* 35 -4 - self.camera.x,ceil_height + window_height + 15,0,8*46,8*104,8* 8,8*8,0)
+        ###本達
+        pyxel.blt( 8* 10    - self.camera.x,ceil_height + window_height + 10, 2, 224, 152, 8*2, 8*2, 14)
         ##電源
         pyxel.blt( 277     - self.camera.x,150,2,144,160,16,16,3)
         pyxel.line(277 +15 - self.camera.x,157,277 +58 - self.camera.x,157,13)
@@ -1879,6 +2223,13 @@ class MyApp:
             pyxel.blt(318 - self.camera.x, ceil_height + window_height -17, 1, 144, 88, 16, 11, 0)
         elif pyxel.frame_count // 20 % 2 == 1:
             pyxel.blt(318 - self.camera.x, ceil_height + window_height -17, 1, 144, 99, 16, 11, 0)
+        ###BOOK
+        self.drawBookBG(500 - self.camera.x, ceil_height + window_height - 8* 4 + 5)
+
+    def drawEndBG(self):
+        # test-background-color
+        pyxel.cls(15)
+
     def drawParticles(self):
         ### 有効なパーティクルをすべて描画する
         if len(self.psys_instances) > 0:
@@ -1887,6 +2238,23 @@ class MyApp:
                 # psys.draw_particles(0,0,300)
                 psys.draw_particles(self.camera.x,0,300)
 
+
+    def drawBookBG(self,x,y):
+        ##祠と本を描画
+        pyxel.blt(x,y,2,208,104,32,32,15)
+        bx,by = x+8,y+10
+        dh = 0
+        if pyxel.frame_count // 10 % 8 in(0,4):
+            dh = 0
+        elif pyxel.frame_count // 10 % 8 in(1,3):
+            dh = 1
+        elif pyxel.frame_count // 10 % 8 == 2:
+            dh = 2
+        elif pyxel.frame_count // 10 % 8 in(5,7):
+            dh = -1
+        elif pyxel.frame_count // 10 % 8 == 6:
+            dh = -2
+        pyxel.blt(bx,by+dh,2,240,88,16,16,0)
 
     def rainAxisColorSengen(self):
         ###波紋描画用変数の初期化
@@ -1969,13 +2337,13 @@ class MyApp:
                 pyxel.blt(245 + 5 - self.camera.x, 145, 2, 16 * 5, 16 * 5,-16 * 1, 16 * 6,3)
                 pyxel.blt(365 + 5 - self.camera.x, 145, 2, 16 * 5, 16 * 5,-16 * 1, 16 * 6,3)
                 pyxel.blt(480 + 5 - self.camera.x, 145, 2, 16 * 5, 16 * 5, 16 * 1, 16 * 6,3)
-                ###electric line1
+                ###電線1
                 self.drawElectricalwire( 90 -150 - self.camera.x,60 -5,240 -150 - self.camera.x,60 -5)
                 self.drawElectricalwire( 90      - self.camera.x,60 -5,240      - self.camera.x,60 -5)
                 self.drawElectricalwire( 90 +150 - self.camera.x,60 -5,240 +150 - self.camera.x,60 -5)
                 self.drawElectricalwire( 90 +300 - self.camera.x,60 -5,240 +300 - self.camera.x,60 -5)
                 self.drawElectricalwire( 90 +450 - self.camera.x,60 -5,240 +450 - self.camera.x,60 -5)
-                ###electric line2
+                ###電線2
                 self.drawElectricalwire( 90 -150 - self.camera.x,60,240 -150 - self.camera.x,60)
                 self.drawElectricalwire( 90      - self.camera.x,60,240      - self.camera.x,60)
                 self.drawElectricalwire( 90 +150 - self.camera.x,60,240 +150 - self.camera.x,60)
@@ -1996,8 +2364,13 @@ class MyApp:
                 self.frames = Math.floor(pyxel.frame_count/9) % 10
                 pyxel.blt(450 - self.camera.x, 190, 1, 16 * 7, 0 + self.frames * 16,  16 * 1, 16 * 1,6)
 
+            if(self.gamestate.scene == C_SCENE_MOON):
+                ###紙垂の描画
+                self.drawSideLine(85,9)
 
             if(self.gamestate.scene == C_SCENE_FIRE):
+
+
                 for point3d in self.points3d:
                     for point in point3d.points:
                         ###個々の光点の座標がplayerのyより手前にあれば描画
@@ -2010,9 +2383,21 @@ class MyApp:
                         ###個々の光点の座標がplayery座標より小さいか、奥にあれば描画
                         # if (point.z <= 0 and point.y > self.player.position_y) or (point.y <= self.player.position_y):
                         if (point.y <= self.player.position_y):
-                            point.draw(self.camera.x)       
+                            point.draw(self.camera.x)
+                ###
+                ###石柱（小）の描画（青）
+                for i in range(0, 42):
+                    ###３００幅の画面外は描画しない
+                    if(i * 16 - self.camera.x < 300):
+                        pyxel.blt( 3 + i * 16 - self.camera.x, 8 * 27, 1, 64, 240, 8, 16, 0)
+                
+
+                ###紙垂の描画
+                self.drawSideLine( 65,9)
+                self.drawSideLine(180,9)
+
                 ###デモタイトル表示
-                self.bdf2.draw_text(150, 2, "PRESS V : 蛍", 7) 
+                # self.bdf2.draw_text(150, 2, "PRESS V : 蛍", 7) 
 
             ###波紋の戸
             if(self.gamestate.scene == C_SCENE_WATER):
@@ -2049,8 +2434,12 @@ class MyApp:
                     if self.player.player_direction == 3:
                         pyxel.blt(self.player.position_x  +2 -self.camera.x, self.player.position_y -4, 2, 64, wk_frames2 * 5,  12, 5, 0)
                         pyxel.blt(self.player.position_x -14 -self.camera.x, self.player.position_y -4, 2, 64, wk_frames2 * 5 + 16, -12, 5, 0)
+                
                 ###WaterTree
                 self.drawWaterFT()
+                ###紙垂の描画
+                self.drawSideLine(65,9)
+
 
             if(self.gamestate.scene == C_SCENE_WOOD):
                 ###木の描画
@@ -2058,12 +2447,18 @@ class MyApp:
                 ###草を描画
                 for grass in self.grasses:
                     ###画面枠（X座標０〜３００）外の草は描画しないようにする
-                        grass.draw(self.camera.x,0,300)
+                    ###適用カメラに係数でパララックスをかける
+                        grass.draw(self.camera.x * 1.2, 0, 300)
                 # 花を描画
+                ###適用カメラに係数でパララックスをかける
                 for flower in self.flowers:
-                    flower.draw(self.camera.x,0,0,300)
+                    flower.draw(self.camera.x * 1.2,0, 0, 300)
                 # ###デモタイトル表示
                 # self.bdf2.draw_text(150, 2, "PRESS V : particle生成", 7) 
+
+                ###紙垂の描画
+                self.drawSideLine(65,9)
+
 
             if(self.gamestate.scene == C_SCENE_GOLD):
                 ###被playerの位置によって描画順序を変える対象の描画
@@ -2072,6 +2467,9 @@ class MyApp:
                 for i in range(0, 4):
                     if self.player.position_y <= self.sandfall_points[i] :
                         self.drawSandFlow(self.sandx[i] -self.camera.x, self.sandy[i], self.width[i], self.times[i], self.sand_frame[i%4],i) #x,y、幅、長さセット、描画周期のスタート位置
+
+                ###紙垂の描画
+                self.drawSideLine(45,1)
 
                 ###最前景用
                 scroll_ratio5 = 1.05
@@ -2092,13 +2490,61 @@ class MyApp:
                 # self.bdf2.draw_text(150,14, "PRESS R : 白銀比/黄金比", 7) 
                 # self.bdf2.draw_text(150,26, "PRESS T : angle +15", 7) 
 
+            if(self.gamestate.scene == C_SCENE_SOIL):
+                ###蝶の描画
+                if len(self.butterflies) > 0:
+                    for butterfly in self.butterflies:
+                        butterfly.draw(self.camera.x)
+
+                ###playerのy位置が137以下のとき描画
+                if self.player.y <= 137:
+                    ###柱（手前列）
+                    pyxel.bltm( 30 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+                    pyxel.bltm(180 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+                    pyxel.bltm(290 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+                    pyxel.bltm(440 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+                    pyxel.bltm(570 -self.camera.x,8*7, 0, 8*0,8*192,8*2,8*16,3)
+                    ###屋根
+                    pyxel.bltm(-20 -self.camera.x,  0, 0, 8*6,8*192,8*33,8*8,3)
+                    pyxel.bltm(243 -self.camera.x,  0, 0, 8*6,8*192,8*33,8*8,3)
+                    pyxel.bltm(506 -self.camera.x,  0, 0, 8*6,8*192,8*33,8*8,3)
+
+                ###sunlinesの描画
+                if len(self.sunlines) > 0:
+                    for sunline in self.sunlines:
+                        sunline.draw(self.camera.x, 1, self.player.position_y)
+                
+                ###紙垂の描画
+                self.drawSideLine(55,1)
+
+                ###木々の描画
+                pyxel.bltm(-20        -self.camera.x,    0, 0,  0,  8*208,  8*16,  8*8, 0)
+                pyxel.bltm(-20 + 8*14 -self.camera.x,  -12, 0,  0,  8*208,  8*16,  8*8, 0)
+                pyxel.bltm(-20 + 8*27 -self.camera.x,   -6, 0,  0,  8*208,  8*16,  8*8, 0)
+                pyxel.bltm(-20 + 8*41 -self.camera.x,    0, 0,  0,  8*208,  8*16,  8*8, 0)
+                pyxel.bltm(-20 + 8*56 -self.camera.x,   -6, 0,  0,  8*208,  8*16,  8*8, 0)
+                pyxel.bltm(-20 + 8*71 -self.camera.x,  -13, 0,  0,  8*208,  8*16,  8*8, 0)
+
+
             if(self.gamestate.scene == C_SCENE_SUN):
                 ###　観葉植物
                 # for i in range(0, 60):
                 #     pyxel.blt( i*20 - self.camera.x,184,2,192,104,16,48,0)
                 pyxel.blt( 5*20 - self.camera.x,184,2,192,104,16,48,0)
                 pyxel.blt( 15*20 - self.camera.x,184,2,192,104,16,48,0)
-            
+    
+                ###紙垂の描画
+                self.drawSideLine(20,9)
+
+            if(self.gamestate.scene == C_SCENE_END):
+                ###　観葉植物 # テスト用
+                pyxel.blt( 5*20 - self.camera.x,184,2,192,104,16,48,0)
+                pyxel.blt( 15*20 - self.camera.x,184,2,192,104,16,48,0)
+
+                ###紙垂の描画
+                self.drawSideLine(35,1)
+
+
             ###scene,scenetimerに応じた描画
             if self.gamestate.door_transition :
                 ###円の描画を行う場合
@@ -2149,46 +2595,47 @@ class MyApp:
                         if (self.gamestate.scenario[0][1] == 0):
                             self.bdf2.draw_text(130, 132, "浜辺", 7)
                         if (self.gamestate.scenario[0][1] >= 1):
-                            self.bdf2.draw_text(118, 132, "静かの水域", 7)
+                            self.bdf2.draw_text(118, 132, "浜辺", 7)
                     if self.gamestate.scene == C_SCENE_MOON:
                         self.bdf2.draw_text(120, 132, "月見丘", 7)
                     if self.gamestate.scene == C_SCENE_FIRE:
-                        self.bdf2.draw_text(115, 132, "灯籠の小路", 7)
+                        self.bdf2.draw_text(115, 132, "灯籠の路", 7)
                     if self.gamestate.scene == C_SCENE_WATER:
-                        self.bdf2.draw_text(120, 132, "雨降る池", 7)
+                        self.bdf2.draw_text(120, 132, "雨の林", 7)
                     if self.gamestate.scene == C_SCENE_WOOD:
                         self.bdf2.draw_text(120, 132, "緑の桟道", 7)
                     if self.gamestate.scene == C_SCENE_GOLD:
                         self.bdf2.draw_text(120, 132, "砂の檻", 7)
                     if self.gamestate.scene == C_SCENE_SOIL:
-                        self.bdf2.draw_text(120, 132, "献花台", 7)
+                        self.bdf2.draw_text(120, 132, "献花場", 7)
                     if self.gamestate.scene == C_SCENE_SUN:
                         self.bdf2.draw_text(120, 132, "雪の日", 7)
+                    if self.gamestate.scene == C_SCENE_END:
+                        self.bdf2.draw_text(120, 132, "主の部屋", 7)
                     if self.gamestate.scene == C_SCENE_CHOICE:
                         self.bdf2.draw_text(130, 132, "帰路", 7)
             
             ###メニュー＆会話用のエリアを黒く表示する
             pyxel.rect(0, 232, 300, 68, 0)    
-            ###デモタイトル表示
-            pyxel.rect(6, 2, 38, 25, 1)
+
+            ###デバッグ用デモタイトル表示
+            pyxel.rect(5, 2, 110, 51, 1)
             self.bdf2.draw_text(10, 2, self.getModeName(), 7) 
             self.bdf2.draw_text(10,14, self.getSceneName(), 7) 
-            self.bdf1.draw_text(45, 2, "x:" + str(self.player.x), 7) 
-            self.bdf1.draw_text(45,12, "y:" + str(self.player.y), 7) 
-            self.bdf1.draw_text(45,22, "scene   :" + str(self.gamestate.scenario[0][0]), 0)
-            self.bdf1.draw_text(45,32, "scenario:" + str(self.gamestate.scenario[0][1]), 0)
-            self.bdf1.draw_text(45,42, "branch  :" + str(self.gamestate.scenario[0][2]), 0)
-            # self.gamestate.scenario[0][1] = obj.scenario_no
-            # self.gamestate.scenario[0][2]
+            self.bdf1.draw_text(55, 2, "x:" + str(self.player.x), 7) 
+            self.bdf1.draw_text(55,12, "y:" + str(self.player.y), 7) 
+            self.bdf1.draw_text(45,22, "scene   :" + str(self.gamestate.scenario[0][0]), 7)
+            self.bdf1.draw_text(45,32, "scenario:" + str(self.gamestate.scenario[0][1]), 7)
+            self.bdf1.draw_text(45,42, "branch  :" + str(self.gamestate.scenario[0][2]), 7)
 
 
-    def drawElectricalwire(self,sx,sy,ex,ey):
+    def drawElectricalwire(self,sx,sy,ex,ey,col=1):
         ###PLAYモード共通ロジック
         if (self.gamestate.mode == C_PLAY):
             self.start_point = [sx,sy]
             self.end_point = [ex,ey]
             self.full_line = ex - sx
-            self.line_color = 1 #deepblue
+            self.line_color = col #deepblue
             ###線分座標のリセット
             self.seg_line1_Spoint = [0,0]
             self.seg_line1_Epoint = [0,0]
@@ -2253,10 +2700,54 @@ class MyApp:
                 pyxel.line(self.seg_line3_Spoint[0], self.seg_line3_Spoint[1], self.seg_line3_Epoint[0], self.seg_line3_Epoint[1], self.line_color)
                 pyxel.line(self.seg_line5_Spoint[0], self.seg_line5_Spoint[1], self.seg_line5_Epoint[0], self.seg_line5_Epoint[1], self.line_color)
 
+    def drawSideLine(self,by=85,sidecol=9):
+                ###紙垂用ラインのパラメタ指定
+                start_x = 90
+                end_x = 240
+                base_y = by
+                base_spanx = 150
+                sideline_col = sidecol
+                paper_start_x = 64
+                side_spanx = 32
+
+                blocknum0, blocknum1, blocknum2, blocknum3 = 0, 1, 2, 3
+
+                ###紙垂用のライン１
+                self.drawElectricalwire( start_x -base_spanx   - self.camera.x,base_y,end_x -base_spanx   - self.camera.x,base_y,sideline_col)
+                self.drawElectricalwire( start_x               - self.camera.x,base_y,end_x               - self.camera.x,base_y,sideline_col)
+                self.drawElectricalwire( start_x +base_spanx  - self.camera.x,base_y,end_x +base_spanx   - self.camera.x,base_y,sideline_col)
+                self.drawElectricalwire( start_x +base_spanx*2 - self.camera.x,base_y,end_x +base_spanx*2 - self.camera.x,base_y,sideline_col)
+                self.drawElectricalwire( start_x +base_spanx*3 - self.camera.x,base_y,end_x +base_spanx*3 - self.camera.x,base_y,sideline_col)
+                ###紙垂1
+                pyxel.blt(paper_start_x - base_spanx + side_spanx * 0 - self.camera.x, base_y + 3, 1, 64 + 4*blocknum0, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x - base_spanx + side_spanx * 1 - self.camera.x, base_y + 2, 1, 64 + 4*blocknum1, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x - base_spanx + side_spanx * 2 - self.camera.x, base_y + 6, 1, 64 + 4*blocknum2, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x - base_spanx + side_spanx * 3 - self.camera.x, base_y + 7, 1, 64 + 4*blocknum3, 224, 4, 16, 0)
+                ###紙垂2
+                pyxel.blt(paper_start_x + base_spanx * 0 + side_spanx * 0 - self.camera.x, base_y + 3, 1, 64 + 4*blocknum0, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 0 + side_spanx * 1 - self.camera.x, base_y + 2, 1, 64 + 4*blocknum1, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 0 + side_spanx * 2 - self.camera.x, base_y + 6, 1, 64 + 4*blocknum2, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 0 + side_spanx * 3 - self.camera.x, base_y + 7, 1, 64 + 4*blocknum3, 224, 4, 16, 0)
+                ###紙垂3
+                pyxel.blt(paper_start_x + base_spanx * 1 + side_spanx * 0 - self.camera.x, base_y + 3, 1, 64 + 4*blocknum0, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 1 + side_spanx * 1 - self.camera.x, base_y + 2, 1, 64 + 4*blocknum1, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 1 + side_spanx * 2 - self.camera.x, base_y + 6, 1, 64 + 4*blocknum2, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 1 + side_spanx * 3 - self.camera.x, base_y + 7, 1, 64 + 4*blocknum3, 224, 4, 16, 0)
+                ###紙垂4
+                pyxel.blt(paper_start_x + base_spanx * 2 + side_spanx * 0 - self.camera.x, base_y + 3, 1, 64 + 4*blocknum0, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 2 + side_spanx * 1 - self.camera.x, base_y + 2, 1, 64 + 4*blocknum1, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 2 + side_spanx * 2 - self.camera.x, base_y + 6, 1, 64 + 4*blocknum2, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 2 + side_spanx * 3 - self.camera.x, base_y + 7, 1, 64 + 4*blocknum3, 224, 4, 16, 0)
+                ###紙垂5
+                pyxel.blt(paper_start_x + base_spanx * 3 + side_spanx * 0 - self.camera.x, base_y + 3, 1, 64 + 4*blocknum0, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 3 + side_spanx * 1 - self.camera.x, base_y + 2, 1, 64 + 4*blocknum1, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 3 + side_spanx * 2 - self.camera.x, base_y + 6, 1, 64 + 4*blocknum2, 224, 4, 16, 0)
+                pyxel.blt(paper_start_x + base_spanx * 3 + side_spanx * 3 - self.camera.x, base_y + 7, 1, 64 + 4*blocknum3, 224, 4, 16, 0)
+
     def drawObjects(self):
         ###HOMEシーン用オブジェクトの描画
         if (self.gamestate.mode == C_PLAY):
-            if(self.gamestate.scene in(C_SCENE_HOME, C_SCENE_MOON, C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_WOOD, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN)):
+            if(self.gamestate.scene in(C_SCENE_HOME, C_SCENE_MOON, C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_WOOD, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN, C_SCENE_END)):
                 for obj in doors:
                     obj.draw()
                 ###当たり判定用オブジェクト（非描画）をスクロール加味しない状態への「戻し」
@@ -2274,7 +2765,7 @@ class MyApp:
 
             ###各オブジェクトリストの長さの合計が2以上のとき、すなわちプレイヤー以外にオブジェクトが存在するときのみ
             if (len(characters) + len(doors) + len(ataris) >= 2):
-                self.nearest_obj = self.checkObjectsListDistance()
+                self.nearest_obj,self.nearest_obj_distancetoPlayer = self.checkObjectsListDistance()
             # #最終順序リストをcharactersで初期化
             # self.wk_objectDrawlistBasedAxisY = characters
             # #並び替え
@@ -2347,7 +2838,7 @@ class MyApp:
                         self.fukidashi_nearest_obj_x +=  8
                         self.fukidashi_nearest_obj_y -= 16
 
-            return self.rtn_obj
+            return self.rtn_obj, distance
 
     def check_nearest_obj_axis(self, player, list):
         ###PLAYモード共通ロジック
@@ -2372,13 +2863,20 @@ class MyApp:
     def updateBtnInputCheck(self):
         ###PLAYモード共通ロジック
         if (self.gamestate.mode == C_PLAY) and (self.inputdelay_cnt == 0):
+            ###ボタン入力検知（Tキー） ### デバッグ用のシナリオ番号操作キー。ブランチはリセットする。
+            if pyxel.btnp(pyxel.KEY_T):
+                self.gamestate.scenario[0][1] += 1
+                if(self.gamestate.scenario[0][1] == 9):
+                    self.gamestate.scenario[0][1] = 0
+                self.gamestate.scenario[0][2] = 0
+                self.inputdelay_cnt = self.inptdelay_C #入力受付遅延用カウンタをリセット
             ###オブジェクトリストの合計が2以上のときのみ、スペースキー打鍵を検知する
             if (len(characters) + len(doors) + len(ataris) >= 2):
                 ###ボタン入力検知（スペースキー、ゲームパッドAキー）
                 if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A):
                     ##スペース打鍵によるチェックフラグが有効中でない
                     if (self.pressed_space_checking == False):
-                        if self.nearest_obj.flg_reaction : ### 近接オブジェクトのリアクションフラグが有効中のときだけ
+                        if self.nearest_obj.flg_reaction : ### 近接オブジェクトのリアクションフラグが有効中のときだけ    
                             ###話しかけた・調べた対象のオブジェクトがキャラクターだった場合、方向をプレイヤへ向き直させる
                             if (self.nearest_obj.__class__.__name__ == "Character"):
                                 ###従前の向きを退避
@@ -2403,9 +2901,6 @@ class MyApp:
                                     self.name_disp = self.player.name_disp
                                     self.talking_chara_face_no = self.player.face_no
                                 else:
-                                    # if (self.nearest_obj.__class__.__name__ == "Atari"):
-                                    #     if self.nearest_obj.obj_no == 3:
-                                    #         self.talking_chara_no = 9903
                                     if (self.nearest_obj.__class__.__name__ in("Jerry","Atari")):
                                         wk_no = self.nearest_obj.obj_no
                                         if len(str(wk_no)) == 1:
@@ -2420,17 +2915,18 @@ class MyApp:
                                 self.nearest_obj.cancelFlgWaitingResponce()
                             else:
                                 ###相手が自身から発話するとき
-                                self.getText(self.nearest_obj)
-                                ###テキストウィンドウ表示用顔グラ判別のためのキャラ番号取得
-                                if (self.nearest_obj.__class__.__name__ == "Character"):
-                                    self.talking_chara_no = self.nearest_obj.character_no
-                                    self.name_disp = self.nearest_obj.name_disp
-                                    self.talking_chara_face_no = self.nearest_obj.face_no
-                                else:
-                                    # if (self.nearest_obj.__class__.__name__ == "Atari"):
-                                    #     if self.nearest_obj.obj_no == 3:
-                                    #         self.talking_chara_no = 9903
-                                    #         self.name_disp = self.nearest_obj.name_disp
+                                ###ドアの場合、可視状態じゃない時は何もしない
+                                if (self.nearest_obj.__class__.__name__ == "Door"):
+                                    if (self.nearest_obj.visible == True):
+                                        self.getText(self.nearest_obj)
+                                        self.talking_chara_no = 99                                        
+                                if (self.nearest_obj.__class__.__name__ in("Character","Jerry","Atari")):
+                                    self.getText(self.nearest_obj)
+                                    ###テキストウィンドウ表示用顔グラ判別のためのキャラ番号取得
+                                    if (self.nearest_obj.__class__.__name__ == "Character"):
+                                        self.talking_chara_no = self.nearest_obj.character_no
+                                        self.name_disp = self.nearest_obj.name_disp
+                                        self.talking_chara_face_no = self.nearest_obj.face_no
                                     if (self.nearest_obj.__class__.__name__ in("Jerry","Atari")):
                                         wk_no = self.nearest_obj.obj_no
                                         if len(str(wk_no)) == 1:
@@ -2439,16 +2935,17 @@ class MyApp:
                                             wk_no4 = "99"+str(wk_no)
                                         self.talking_chara_no = int(wk_no4)
                                         self.name_disp = self.nearest_obj.name_disp
-                                    else:
-                                        self.talking_chara_no = 99
-                                # ###相手が発話後返答待ちになったら
-                                # if(self.nearest_obj.flg_waiting_responce):
-                                #     ###相手がplayerからの発話待ちのとき
-                                #     self.getAskText(self.player)
 
-                            self.pressed_space_checking = True
-                            self.display_finished = False
-                            self.inputdelay_cnt = self.inptdelay_C #入力受付遅延用カウンタをリセット
+                            if (self.nearest_obj.__class__.__name__ == "Door"):
+                                if (self.nearest_obj.visible == True):
+                                    self.pressed_space_checking = True
+                                    self.display_finished = False
+                                    self.inputdelay_cnt = self.inptdelay_C #入力受付遅延用カウンタをリセット
+                            if (self.nearest_obj.__class__.__name__ in("Character","Jerry","Atari")):
+                                self.pressed_space_checking = True
+                                self.display_finished = False
+                                self.inputdelay_cnt = self.inptdelay_C #入力受付遅延用カウンタをリセット
+
                     ##スペース打鍵によるチェックフラグが有効中
                     else:
                         if (self.nearest_obj.__class__.__name__ == "Door"):
@@ -2472,48 +2969,59 @@ class MyApp:
                                 self.text_divided = False #分割済みフラグのクリア
 
                                 ###話しかけた・調べた対象のオブジェクトがドアだった場合、戸が持つルーム番号に応じてgamestateのシーン番号を変える
-                                if (self.nearest_obj.__class__.__name__ == "Door"):
-                                    if (self.nearest_obj.room_no != 0)  or \
-                                    (self.nearest_obj.room_no == 0 and self.gamestate.scene != 0):
-                                        self.deleteObjectsDependingOnScene() ##現在のシーンに応じてオブジェクトを削除しリセット
-                                        self.gamestate.door_open_array_bf = self.gamestate.door_open_array.copy() #ドアの開閉状態を保持
-                                        ###現在のシーンで戸を出るとき、次のナンバリングの戸をアンロックする
-                                        next_scene = (self.gamestate.scene + 1) % len(self.gamestate.door_open_array)
-                                        self.gamestate.unlock_door(next_scene)
-                                        ###テキスト処理用変数をリセット
-                                        self.inputdelay_cnt = 0 #入力受付遅延用カウンタをリセット
-                                        self.pressed_space_checking = False #「SPACEキー打鍵によるチェック中」フラグをOFF
-                                        # ###scroll関係変数をリセット
-                                        self.scroll_direction = 0
-                                        # self.scroll_x = 0
-                                        # self.scroll_distance = 0
-                                        self.gamestate.scene = self.nearest_obj.room_no
-                                        self.gamestate.scenario[0][0] = self.nearest_obj.room_no
-                                        self.gamestate.scenetimer = 0
-                                        ##選択中ドア(＝scene)と現在シナリオ状態から、ドア先用にシナリオ番号の初期値をセットし直す
-                                        self.doorScenarioSet(self.nearest_obj.room_no, self.gamestate.scenario[0][1], self.gamestate.scenario[0][2])
-                                        ###パララックス背景用変化率をSceneに応じてリセット
-                                        self.parallax_value_set(self.gamestate.scene)
-                                        ###パララックス背景用スクロール値をリセット
-                                        self.scroll_positions = [0.1 for _ in range(9)]
-                                        # ###パーティクルシステムのインスタンスをリセット
-                                        self.psys_instances = list()
-                                        self.generateObjects() ##現在のシーンに応じてオブジェクトを生成
-                                        ###チェック中のオブジェクトをリセット
-                                        self.nearest_obj = None
-                                        ###チェック中のオブジェクトがいる方向、をリセット
-                                        self.checking_obj_direction = 4
-                                        ###パーティクルシステムのタイマーをリセット
-                                        self.timer_for_psys = 0
-                                        ###トランジション描画のために、フェードアウト用のフラグをONにする
-                                        self.gamestate.door_transition = True
-                                        door_tran_particles.append([DoorTranParticle() for _ in range(48)])
+                                if  (self.nearest_obj.__class__.__name__ == "Door"):
+                                    if (self.nearest_obj.visible == True) and \
+                                      self.nearest_obj_distancetoPlayer < 10 and self.object_pos_update_frames == 0:
+                                        if (self.nearest_obj.room_no != 0)  or \
+                                        (self.nearest_obj.room_no == 0 and self.gamestate.scene != 0):
+                                            ###現在のscene情報を退避
+                                            self.prescene = self.gamestate.scene
+                                            self.deleteObjectsDependingOnScene() ##現在のシーンに応じてオブジェクトを削除しリセット
+                                            self.gamestate.door_open_array_bf = self.gamestate.door_open_array.copy() #ドアの開閉状態を保持
+                                            ###現在のシーンで戸を出るとき、次のナンバリングの戸をアンロックする
+                                            next_scene = (self.gamestate.scene + 1) % len(self.gamestate.door_open_array)
+                                            self.gamestate.unlock_door(next_scene)
+                                            ###テキスト処理用変数をリセット
+                                            self.inputdelay_cnt = 0 #入力受付遅延用カウンタをリセット
+                                            self.pressed_space_checking = False #「SPACEキー打鍵によるチェック中」フラグをOFF
+                                            # ###scroll関係変数をリセット
+                                            self.scroll_direction = 0
+                                            # self.scroll_x = 0
+                                            # self.scroll_distance = 0
+                                            self.gamestate.scene = self.nearest_obj.room_no
+                                            self.gamestate.scenario[0][0] = self.nearest_obj.room_no
+                                            self.gamestate.scenetimer = 0
+                                            ##選択中ドア(＝scene)と現在シナリオ状態から、ドア先用にシナリオ番号の初期値をセットし直す
+                                            self.doorScenarioSet(self.nearest_obj.room_no, self.gamestate.scenario[0][1], self.gamestate.scenario[0][2])
+                                            ###パララックス背景用変化率をSceneに応じてリセット
+                                            self.parallax_value_set(self.gamestate.scene)
+                                            ###パララックス背景用スクロール値をリセット
+                                            self.scroll_positions = [0.1 for _ in range(9)]
+                                            # ###パーティクルシステムのインスタンスをリセット
+                                            self.psys_instances = list()
+                                            self.generateObjects() ##現在のシーンに応じてオブジェクトを生成
+                                            ###チェック中のオブジェクトをリセット
+                                            self.nearest_obj = None
+                                            self.nearest_obj_distancetoPlayer = 999
+                                            ###チェック中のオブジェクトがいる方向、をリセット
+                                            self.checking_obj_direction = 4
+                                            ###パーティクルシステムのタイマーをリセット
+                                            self.timer_for_psys = 0
+                                            ###トランジション描画のために、フェードアウト用のフラグをONにする
+                                            self.gamestate.door_transition = True
+                                            door_tran_particles.append([DoorTranParticle() for _ in range(48)])
 
-                                
-                                ###話しかけた・調べた対象がキャラクターまたはアタリオブジェクトだった場合、取得アイテムチェックを呼び出す。
-                                if (self.nearest_obj.__class__.__name__ in("Character", "Atari")):
+                                ###話しかけた・調べた対象がキャラクターまたはアタリオブジェクトだった場合、オブジェクトチェック機能を呼び出す。
+                                if (self.nearest_obj.__class__.__name__ in("Character", "Atari", "Jerry")):
+                                    ##取得アイテムチェック
                                     self.checkGetItem(self.nearest_obj)
-
+                                    ###話しかけた・調べた対象objと進行度に応じた周辺オブジェクトへの状態変化を実行
+                                    self.checkObjStatusChange(self.nearest_obj)
+                                    ##体力への影響チェック（減少）
+                                    self.checkDamage(self.nearest_obj)
+                                    ##体力への影響チェック（増加）
+                                    self.checkRecovery(self.nearest_obj)
+                                    
                             else:
                                 ###テキストが表示完了していないとき、テキスト表示を完了させる
                                 self.framecount_for_text_disp = 999
@@ -2606,6 +3114,41 @@ class MyApp:
                         pyxel.play(3,22) #SE再生(Menuオープン)
                         print("SUBWINDOW OPENED!")
 
+        if (self.gamestate.mode == C_DEAD):
+            if pyxel.btnp(pyxel.KEY_R) and (self.inputdelay_cnt == 0):
+                self.gamestate.mode = C_PLAY
+                self.gamestate.scene = C_SCENE_HOME
+                ###現在のscene情報を退避
+                self.prescene = self.gamestate.scene
+                self.deleteObjectsDependingOnScene() ##現在のシーンに応じてオブジェクトを削除しリセット
+                self.gamestate.door_open_array_bf = self.gamestate.door_open_array.copy() #ドアの開閉状態を保持
+                ###テキスト処理用変数をリセット
+                self.inputdelay_cnt = 0 #入力受付遅延用カウンタをリセット
+                self.pressed_space_checking = False #「SPACEキー打鍵によるチェック中」フラグをOFF
+                # ###scroll関係変数をリセット
+                self.scroll_direction = 0
+                self.gamestate.scene = self.nearest_obj.room_no
+                self.gamestate.scenario[0][0] = self.nearest_obj.room_no
+                self.gamestate.scenetimer = 0
+                ##選択中ドア(＝scene)と現在シナリオ状態から、ドア先用にシナリオ番号の初期値をセットし直す
+                self.doorScenarioSet(self.nearest_obj.room_no, self.gamestate.scenario[0][1], self.gamestate.scenario[0][2])
+                ###パララックス背景用変化率をSceneに応じてリセット
+                self.parallax_value_set(self.gamestate.scene)
+                ###パララックス背景用スクロール値をリセット
+                self.scroll_positions = [0.1 for _ in range(9)]
+                # ###パーティクルシステムのインスタンスをリセット
+                self.psys_instances = list()
+                self.generateObjects() ##現在のシーンに応じてオブジェクトを生成
+                ###チェック中のオブジェクトをリセット
+                self.nearest_obj = None
+                self.nearest_obj_distancetoPlayer = 999
+                ###チェック中のオブジェクトがいる方向、をリセット
+                self.checking_obj_direction = 4
+                ###パーティクルシステムのタイマーをリセット
+                self.timer_for_psys = 0
+                ###インプット遅延カウンタをリセット
+                self.inputdelay_cnt = self.inptdelay_C
+
     def doorScenarioSet(self, scene, scenario, branch):
         ##選択中ドアと現在シナリオ状態でドア先でのシナリオ状態をセットし直す
         ### 【初回】 HOMEシーン -> 【初回】 MOONシーン
@@ -2614,7 +3157,7 @@ class MyApp:
             self.gamestate.scenario[0][2] = 0
 
 
-    def f(self, item_name, scene, scenario, branch, player, obj_with=None):
+    def get_text_on_use_item(self, item_name, scene, scenario, branch, player, obj_with=None):
         ###使用アイテム応じたテキスト・効果を取得する
         print("You selected " + item_name + "and get_text_on_use_item() is called!")
         if item_name == "おにぎり":
@@ -2627,6 +3170,8 @@ class MyApp:
             self.get_text_on_use_item_chocolate(scene, scenario, branch, player, obj_with)
         elif item_name == "ぽんぽこペパロニピザ":
             self.get_text_on_use_item_pizza(scene, scenario, branch, player, obj_with)
+        elif item_name == "甘い水の実":
+            self.get_text_on_use_item_waterpear(scene, scenario, branch, player, obj_with)
         # elif item_name == "金のコイン":
         #     self.get_text_on_use_item_coin(scene, scenario, branch, player, obj_with)
         # elif item_name == "囁く葉":
@@ -2651,6 +3196,8 @@ class MyApp:
         self.recoverPlayerHp(4)
     def get_text_on_use_item_pizza(self, scene, scenario, branch, player, obj_with):
         self.recoverPlayerHp(8)
+    def get_text_on_use_item_waterpear(self, scene, scenario, branch, player, obj_with):
+        self.recoverPlayerHp(5)
     # def get_text_on_use_item_coin(self, scene, scenario, branch, player, obj_with):
     # def get_text_on_use_item_leaf(self, scene, scenario, branch, player, obj_with):
     # def get_text_on_use_item_bottle(self, scene, scenario, branch, player, obj_with):
@@ -2665,6 +3212,15 @@ class MyApp:
             ###playerのHPが最大値を超えたら最大値に戻す
             if self.player.hp > self.player.max_hp:
                 self.player.hp = self.player.max_hp
+
+    ###playerのHPを引数分だけ減少
+    def decreasePlayerHp(self, point):
+        if self.player.hp > 0:
+            self.player.hp -= point
+            ###playerのHPが0以下になったら0に戻す
+            if self.player.hp < 0:
+                self.player.hp = 0
+        ###playerのHPが0になったらゲームオーバー
 
     def parallax_value_set(self, scene):
         # 各レイヤーのスクロール速度を設定
@@ -2738,10 +3294,92 @@ class MyApp:
         self.gamestate.scenario[0][1] = obj.scenario_no
         self.gamestate.scenario[0][2] = obj.branch_no
         self.gamestate.door_open_array = obj.door_open_array
-        ### panning_switchがONのとき、パンニングを実行する
-        if obj.__class__.__name__ == "Atari" and obj == self.atari004 and obj.panning_switch:
-            if self.gamestate.scenario[0][1] == 0 and self.gamestate.scenario[0][2] == 2 :
-                self.camera.start_pan(self.door01.x -20, 50, 30, 50) ## target_x, pan_frames, wait_frames, return_frames
+
+        if (obj.__class__.__name__ in ["Atari","Character","Jerry"]):
+            self.panningControl(obj,self.gamestate.scenario[0][0],self.gamestate.scenario[0][1],self.gamestate.scenario[0][2])
+            
+    def panningControl(self,obj,scene,scenario,branch):
+        ### panning_switchがONのとき、パンニング(target_x, pan_frames, wait_frames, return_frames)を実行する
+        if (obj.panning_switch):
+            # Home
+            if scene == 0 :
+                if self.gamestate.scenario[0][1] == 0 and self.gamestate.scenario[0][2] == 2 :
+                    if obj.__class__.__name__ == "Atari" and obj.obj_no == 3: #猫調べたとき
+                        self.camera.start_pan(self.door01.x -20, 50, 30, 50)
+            # Moon
+            if scene == 1 :
+                if self.gamestate.scenario[0][1] >= 0 and self.gamestate.scenario[0][2] >= 0 :
+                    if obj.__class__.__name__ == "Character" and obj.character_no == 0: #Kana調べたとき
+                        self.camera.start_pan(180, 80, 30, 60) 
+            # Fire
+            if scene == 2 :
+                if self.gamestate.scenario[0][1] >= 0 and self.gamestate.scenario[0][2] >= 0 :
+                    if obj.__class__.__name__ == "Character" and obj.character_no == 0: #Kana調べたとき
+                        self.camera.start_pan(180, 60, 20, 60) 
+            # Water
+            if scene == 3 :
+                if self.gamestate.scenario[0][1] >= 0 and self.gamestate.scenario[0][2] >= 0 :
+                    if obj.__class__.__name__ == "Character" and obj.character_no == 0: #Kana調べたとき
+                        self.camera.start_pan(120, 60, 20, 60) 
+            # Wood
+            if scene == 4 :
+                if self.gamestate.scenario[0][1] >= 0 and self.gamestate.scenario[0][2] >= 0 :
+                    if obj.__class__.__name__ == "Character" and obj.character_no == 0: #Kana調べたとき
+                        self.camera.start_pan(180, 60, 20, 60)
+            # Gold
+            if scene == 5 :
+                if self.gamestate.scenario[0][1] >= 0 and self.gamestate.scenario[0][2] >= 0 :
+                    if obj.__class__.__name__ == "Character" and obj.character_no == 0: #Kana調べたとき
+                        self.camera.start_pan(180, 60, 20, 60) 
+            # Soil
+            if scene == 6 :
+                if self.gamestate.scenario[0][1] >= 0 and self.gamestate.scenario[0][2] >= 0 :
+                    if obj.__class__.__name__ == "Character" and obj.character_no == 0: #Kana調べたとき
+                        self.camera.start_pan(180, 60, 20, 60) 
+            # Sun
+            if scene == 7 :
+                if self.gamestate.scenario[0][1] >= 0 and self.gamestate.scenario[0][2] >= 0 :
+                    if obj.__class__.__name__ == "Character" and obj.character_no == 0: #Kana調べたとき
+                        self.camera.start_pan(180, 60, 20, 60) 
+            # パンニングをOFFにする
+            obj.panning_switch = False  
+
+
+    def checkInvSysItem(self,obj):
+        ### 手元の保持アイテム数をチェックし、最も近い位置にある特定番号オブジェクトの返却テキストフラグを操作する
+        ###PLAYモード共通ロジック。
+        # 現在のシーン、シナリオ、枝番に応じ、引数であるチェック中オブジェクト(キャラクター/アタリ)の返却テキストナンバーをもとにアイテムの保持数をチェックする。
+        scene    = self.gamestate.scenario[0][0]
+        scenario = self.gamestate.scenario[0][1]
+        branch   = self.gamestate.scenario[0][2]
+        conversation_with = self.player.character_no
+        response_no = self.player.responce_no #playerの発話待ちフラグ
+
+        ###現在のシーンやシナリオ・ブランチをCheckInvSysItem対象objに適用しておく
+        obj.scene_no    = scene
+        obj.scenario_no = scenario
+        obj.branch_no   = branch
+
+        ### アイテム名変数を初期化
+        item_name = ''
+        ### 消費アイテムを取得する特定シーンでのみチェック実施
+        if (scene == C_SCENE_WATER) and (obj.obj_no == 33) :
+            ### アイテム名をセット
+            item_name = '甘い水の実'
+        else :
+            ### アイテム名が取得できない場合は、処理を終了
+            return
+        
+        ### アイテム保持数カウントを呼び出し
+        nums_of_item = self.invsys.count_item(item_name)
+        
+        ### 保持数範囲に応じて、最も近くにあるobjectの返却テキストフラグを切替え操作
+        if (scene == C_SCENE_WATER) and (obj.obj_no == 33) :
+            if nums_of_item >= 0 and nums_of_item < 3:
+                obj.rtn_txt_switch = False
+            if nums_of_item >= 5 :
+                obj.rtn_txt_switch = True
+
 
     def checkGetItem(self,obj):
         ###PLAYモード共通ロジック。
@@ -2757,14 +3395,102 @@ class MyApp:
         obj.scenario_no = scenario
         obj.branch_no   = branch
 
-        ### のシーン・シナリオ・ブランチ状態とオブジェクト別返却テキスト番号に応じて、invsysにアイテムをaddする。
+        ### シーン・シナリオ・ブランチ状態とオブジェクト別返却テキスト番号に応じて、invsysにアイテムをaddする。
+        ### WATERシーン用
+        if scene == C_SCENE_WOOD and scenario == 3 and branch == 3 :
+            if (obj.__class__.__name__ == "Atari"):
+                if obj.obj_no == 29:
+                    if obj.rtn_txt_no == 1:
+                        self.invsys.add_valuable('クラゲずかん') 
+                        obj.rtn_txt_no += 1
+                if obj.obj_no == 30:
+                    if obj.rtn_txt_no == 1:
+                        self.invsys.add_valuable('古い手鏡') 
+                        obj.rtn_txt_no += 1
+                if obj.obj_no == 31:
+                    if obj.rtn_txt_no == 1:
+                        self.invsys.add_valuable('サファイアのイヤリング') 
+                        obj.rtn_txt_no += 1
+                if obj.obj_no == 32:
+                    if obj.rtn_txt_no == 1:
+                        self.invsys.add_valuable('小さなガラス瓶') 
+                        obj.rtn_txt_no += 1
+                if obj.obj_no == 33:                        
+                    ###（アイテム保持数チェックは予めcheckInvSysItemで実施し、対象objのフラグを切り替えておく）
+                    self.checkInvSysItem(obj)
+                    if obj.rtn_txt_switch == False:
+                        self.invsys.add_item('甘い水の実') 
+    
         ### WOODシーン用
-        if self.gamestate.scenario[0][0] == 4 and self.gamestate.scenario[0][1] >= 0 and self.gamestate.scenario[0][2] >= 0 :
+        if scene == C_SCENE_WOOD and scenario == 4 and branch == 0 :
             if (obj.__class__.__name__ == "Atari"):
                 if obj.obj_no == 5:
                     if obj.rtn_txt_no == 1:
                         self.invsys.add_valuable('きれいな葉') 
                         obj.rtn_txt_no += 1
+        ### SUNシーン用
+        if scene == C_SCENE_SUN and scenario == 7 and branch == 6 :
+            if (obj.__class__.__name__ == "Atari"):
+                if obj.obj_no == 12:
+                    if obj.rtn_txt_no == 1:
+                        self.invsys.add_valuable('ジェイコブへのメモ') 
+                        branch += 1
+                        obj.rtn_txt_no = 0
+
+        ###チェック過程で操作したシーン・シナリオ・ブランチ状態をgamestateに戻す
+        self.gamestate.scenario[0][0] = scene
+        self.gamestate.scenario[0][1] = scenario
+        self.gamestate.scenario[0][2] = branch
+
+    def checkObjStatusChange(self,obj):
+        ###PLAYモード共通ロジック。
+        # 現在のシーン、シナリオ、枝番に応じ、引数であるチェック中オブジェクト(キャラクター/アタリ)の返却テキストナンバーをもとにSceneに存在するオブジェクト状態を操作する。
+        scene    = self.gamestate.scenario[0][0]
+        scenario = self.gamestate.scenario[0][1]
+        branch   = self.gamestate.scenario[0][2]
+        obj_pos_update_frames = self.object_pos_update_frames
+        conversation_with = self.player.character_no
+        response_no = self.player.responce_no #playerの発話待ちフラグ
+
+        ###現在のシーンやシナリオ・ブランチをCheck対象objに適用しておく
+        obj.scene_no    = scene
+        obj.scenario_no = scenario
+        obj.branch_no   = branch
+        obj.object_pos_update_frames = obj_pos_update_frames
+
+        ### シーン・シナリオ・ブランチ状態とオブジェクト別返却テキスト番号に応じて、操作対象オブジェクトを判断。
+        ### WATERシーン用
+        if scene == C_SCENE_WATER and scenario == 3 and branch == 3 :
+            if (obj.__class__.__name__ == "Jerry"):
+                self.switchAtariVisible([27,28,29,30,31,32,33], True)
+
+        ### SUNシーン用
+        if scene == C_SCENE_SUN and scenario >= C_SCENE_SUN and branch >= 5 :
+            if (obj.__class__.__name__ == "Atari"):
+                if obj.obj_no == 11: ##本(SUN_ROOM)
+                    if obj.rtn_txt_no == 5:
+                       doors[0].visible = True ##外につながるドアを出現させる
+                if obj.obj_no == 12: ##本棚（SUN_ROOM）
+                    if obj.rtn_txt_no == 1:
+                       ##本のページをもとに戻す
+                       obj.rtn_txt_no = 0
+
+        ###チェック過程で操作したシーン・シナリオ・ブランチ状態をgamestateに戻す
+        self.gamestate.scenario[0][0] = scene
+        self.gamestate.scenario[0][1] = scenario
+        self.gamestate.scenario[0][2] = branch
+        self.object_pos_update_frames = obj_pos_update_frames
+
+    ### 調べたオブジェクトに対応してプレイヤーの体力に影響を与える（減少）
+    def checkDamage(self,obj):
+        if (obj.__class__.__name__ == "Atari"):
+            if obj.obj_no == 28:
+                self.decreasePlayerHp(2)
+    
+    def checkRecovery(self,obj):
+        if (obj.__class__.__name__ == "Atari"):
+            if obj.obj_no in [55]:
+                self.recoverPlayerHp(2)
 
 
     def updateTextDivide(self):
@@ -2811,9 +3537,9 @@ class MyApp:
                                 pyxel.blt(8, 238, 0,   0,  0, 16, 16, 3)
                             else:
                                 pyxel.blt(8, 238, 0, 176,  0, 16, 16, 3)
-                    if(self.talking_chara_no == 1): ###WOLF
+                    elif(self.talking_chara_no == 1): ###WOLF
                         if self.name_disp:
-                            self.bdf1.draw_text(33, 243, "ラナ", 7)
+                            self.bdf1.draw_text(33, 243, "アキ", 7)
                         if self.talking_chara_face_no == 0:
                             pyxel.blt(8, 238, 0, 16,  0, 16, 16, 3)
                         if self.talking_chara_face_no == 7:
@@ -2821,24 +3547,94 @@ class MyApp:
                                 pyxel.blt(8, 238, 0,  16,  0, 16, 16, 3)
                             else:
                                 pyxel.blt(8, 238, 0, 128,  0, 16, 16, 3)
-                    if(self.talking_chara_no == 2): ###MICHI
-                        pyxel.blt(8, 238, 1, 16,128, 16, 16, 3)
-                    if(self.talking_chara_no == 7): ###LIKI
-                        pyxel.blt(8, 238, 1, 16,168, 16, 16, 3)
-                    if(self.talking_chara_no == 9903): ###黒猫
+                    elif(self.talking_chara_no == 2): ###MICHI
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "ミチ", 7)
+                            if pyxel.frame_count//10 %4 == 0:
+                                pyxel.blt(8, 238, 1, 128, 192 + 16*0, 16, 16, 3)
+                            elif pyxel.frame_count//10 %4 == 1:
+                                pyxel.blt(8, 238, 1, 128, 192 + 16*1, 16, 16, 3)
+                            elif pyxel.frame_count//10 %4 == 2:
+                                pyxel.blt(8, 238, 1, 128, 192 + 16*2, 16, 16, 3)
+                            else:
+                                pyxel.blt(8, 238, 1, 128, 192 + 16*3, 16, 16, 3)
+                    elif(self.talking_chara_no == 4): ###ジュリ
+                        pyxel.blt(8, 238, 1, 88,  0, 16, 16, 3)
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "ジュリ", 7)
+                    elif(self.talking_chara_no == 5): ###GIRAN
+                        pyxel.blt(8, 238, 1, 160, 72, 16, 16, 0)
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "ギラン", 7)
+                    elif(self.talking_chara_no == 6): ###LUV
+                        pyxel.blt(8, 238, 1,200,  0, 16, 16, 3)
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "ラブ", 7)
+                    elif(self.talking_chara_no == 7): ###LIKI
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "リキ", 7)
+                            if pyxel.frame_count//10 %4 == 0:
+                                pyxel.blt(8, 238, 1, 144, 192 + 16*0, 16, 16, 3)
+                            elif pyxel.frame_count//10 %4 == 1:
+                                pyxel.blt(8, 238, 1, 144, 192 + 16*1, 16, 16, 3)
+                            elif pyxel.frame_count//10 %4 == 2:
+                                pyxel.blt(8, 238, 1, 144, 192 + 16*2, 16, 16, 3)
+                            else:
+                                pyxel.blt(8, 238, 1, 144, 192 + 16*3, 16, 16, 3)
+                    elif(self.talking_chara_no == 11): ###worldMaster
+                        #円塗りつぶし
+                        pyxel.circ(15, 247, 10, 7)
+                        pyxel.blt(8, 238, 1, 152, 128, 16, 16, 3)
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "？？？", 7)
+                    elif(self.talking_chara_no == 9903): ###黒猫
                         if self.name_disp:
                             self.bdf1.draw_text(33, 243, "クロエ", 7)
                         if pyxel.frame_count//10 %2 == 0:
                             pyxel.blt(7, 239, 1, 112, 160, 16, 16, 6)
                         else:
                             pyxel.blt(7, 239, 1, 112, 176, 16, 16, 6)
-                    if(self.talking_chara_no == 9990): ###クラゲ
+                    elif(self.talking_chara_no == 9910): ###ボボ（FIRE）
                         if self.name_disp:
-                            self.bdf1.draw_text(33, 243, "ジェリコ", 7)
+                            self.bdf1.draw_text(33, 243, "ボボ", 7)
+                            if pyxel.frame_count//10 %4 == 0:
+                                pyxel.blt(8, 238, 1, 96, 160 + 16*0, 16, 16, 0)
+                            elif pyxel.frame_count//10 %4 == 1:
+                                pyxel.blt(8, 238, 1, 96, 160 + 16*1, 16, 16, 0)
+                            elif pyxel.frame_count//10 %4 == 2:
+                                pyxel.blt(8, 238, 1, 96, 160 + 16*2, 16, 16, 0)
+                            else:
+                                pyxel.blt(8, 238, 1, 96, 160 + 16*3, 16, 16, 0)
+                    elif(self.talking_chara_no == 9911): ###本（SUN）
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "【ストリングブレイブ】", 7)
+                        pyxel.blt(8, 238, 2, 240, 88, 16, 16, 0)
+                    elif(self.talking_chara_no == 9911): ###本（SUN）
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "【ストリングブレイブ】", 7)
+                        pyxel.blt(8, 238, 2, 240, 88, 16, 16, 0)
+                    elif(self.talking_chara_no == 9913): ###ブルー（SUN）
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "ブルー", 7)
+                        pyxel.blt(8, 238, 1, 0, 96, 16, 16, 3)
+                    elif(self.talking_chara_no == 9990): ###クラゲ
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "ジュリ", 7)
                         if pyxel.frame_count//10 %2 == 0:
                             pyxel.blt(8, 239, 1, 88, 0, 16, 16, 0)
                         else:
                             pyxel.blt(8, 239, 1, 88, 0, 16, 16, 0)
+                    elif(self.talking_chara_no == 9922): ###宝石（GOLD）
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "緑に輝く宝石", 7)
+                        pyxel.blt(8, 238, 1, 176, 56, 16, 16, 4)
+                    elif(self.talking_chara_no == 9923): ###剣（GOLD）
+                        if self.name_disp:
+                            self.bdf1.draw_text(33, 243, "湾曲した剣", 7)
+                        pyxel.blt(8, 238, 1, 176, 32, 16, 16, 3)
+                    else:
+                        ###キャラクタ画像
+                        pyxel.blt(8, 238, 0, 16,  0, 16, 16, 3)
                     ###台紙重ね
                     pyxel.blt(4, 249, 0, 48, 24, 24,  8, 3)
 
@@ -2977,46 +3773,29 @@ class MyApp:
     def play_music(self):
         ###PLAYモードかつHOMEシーン
         if (self.gamestate.mode == C_PLAY):
-            pyxel.playm(7, loop=True)
+            if (self.gamestate.scene == C_SCENE_HOME):
+                pyxel.playm(7, loop=True)
+            if (self.gamestate.scene == C_SCENE_MOON):
+                pyxel.playm(7, loop=True)
+            if (self.gamestate.scene == C_SCENE_FIRE):
+                pyxel.playm(6, loop=True)
+            if (self.gamestate.scene == C_SCENE_WATER):
+                pyxel.playm(6, loop=True)
+            if (self.gamestate.scene == C_SCENE_WOOD):
+                pyxel.playm(7, loop=True)
+            if (self.gamestate.scene == C_SCENE_GOLD):
+                pyxel.playm(2, loop=True)
+            if (self.gamestate.scene == C_SCENE_SOIL):
+                pyxel.playm(3, loop=True)
+            if (self.gamestate.scene == C_SCENE_SUN):
+                pyxel.playm(7, loop=True)
 
-        #     if(self.gamestate.scene in(C_SCENE_HOME, C_SCENE_MOON, C_SCENE_FIRE, C_SCENE_WATER, C_SCENE_WOOD, C_SCENE_GOLD, C_SCENE_SOIL, C_SCENE_SUN)):
-        #         pyxel.playm(1, loop = True)
-
-    def make_music(self):
-        # メロディーチャンネルの音符定義
-        melody_notes = "C3 E3 G3 A3 G3 E3 C3 R " \
-                    "D3 F3 A3 B3 A3 F3 D3 R " \
-                    "E3 G3 C4 D4 C4 G3 E3 R"
-        
-        # ハーモニーチャンネルの音符定義
-        harmony_notes = "C2 E2 G2 A2 G2 E2 C2 R " \
-                        "D2 F2 A2 B2 A2 F2 D2 R " \
-                        "E2 G2 C3 D3 C3 G2 E2 R"
-        
-        # リズムチャンネルの音符定義（ベースライン）
-        rhythm_notes = "C1 C1 C1 C1 C1 C1 C1 C1 " \
-                    "D1 D1 D1 D1 D1 D1 D1 D1 " \
-                    "E1 E1 E1 E1 E1 E1 E1 E1"
-
-        # 音符の長さに基づいて、音量とエフェクトの文字列を生成
-        melody_tones = "s" * len(melody_notes.split())
-        harmony_tones = "s" * len(harmony_notes.split())
-        rhythm_tones = "s" * len(rhythm_notes.split())
-
-        volume_string = "6" * len(melody_notes.split())
-        effect_string = "n" * len(melody_notes.split())
-
-        # 各チャンネルのサウンドデータを設定
-        pyxel.sound(26).set(melody_notes, melody_tones, volume_string, effect_string)
-        pyxel.sound(27).set(harmony_notes, harmony_tones, "4" * len(harmony_notes.split()), "n" * len(harmony_notes.split()))
-        pyxel.sound(28).set(rhythm_notes, rhythm_tones, "5" * len(rhythm_notes.split()), "n" * len(rhythm_notes.split()))
-
-        # 音楽データを設定（3チャンネルを使う）
-        pyxel.music(5).set(0, 26)
-        pyxel.music(5).set(1, 27)
-        pyxel.music(5).set(2, 28)
+    def checkSceneMusic(self):
+        if self.prescene != self.gamestate.scene:
+            self.prescene = self.gamestate.scene
+            pyxel.stop()
+            self.play_music()
 
 
-      
 #----------------------------
 MyApp()

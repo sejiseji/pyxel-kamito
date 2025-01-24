@@ -28,6 +28,8 @@ class Jerry(GameObject):
 
         self.obj_no = obj_no
 
+        self.panning_switch = False
+
         ###シーンごとに表示するテキストを変えるための変数
         self.scene_no = 3 # 0:home 1:door1 2:door2 3:door3 4:door4 5:door5 6:door6 7:door7 8:ending
         self.scenario_no = 3
@@ -97,21 +99,42 @@ class Jerry(GameObject):
         self.door_open_array = door_open_array
 
         ### ◆シーン１　ー　シナリオ１
-        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no == 3) and (self.branch_no == 0)):
+        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no == C_SCENE_WATER) and (self.branch_no == 0)):
+            if self.rtn_txt_no == 0:
+                self.rtn_txt_no += 1
+                self.setFlgWaitingResponce()
+                return ["・・・・・え？","だ　だれ・・・？　あなた達・・・。","",
+                        "こんなところ　ほかにだれかいるわけ・・・。","え・・・　でも・・・　え？","",
+                        "ううん、　だめ、　ちがう。","これは幻覚、　これも幻覚、　幻覚よ・・・・。"]
+            if self.rtn_txt_no == 1:
+                self.rtn_txt_no = 0
+                self.setFlgWaitingResponce()
+                self.branch_no += 1
+                return ["ま、迷い込んだ？　ウソ、そんなこと・・・。", "","",
+                        "だめだめだめだめ。　だいじょうぶ、　すぐ消える。","きっと。　すぐ。　すぐ消える。　大丈夫。","だいじょうぶ・・・・・・。"]
+        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no == 3) and (self.branch_no == 1)):
             if self.rtn_txt_no == 0:
                 self.rtn_txt_no += 1
                 self.cancelFlgWaitingResponce()
-                return ["・・・・・？","え、うそ。人？","",
-                        "いや、イヌ？オオカミ？","じゃなくて。","",
-                        "ま、ままままままってまって。","え？夢？？？？"]
+                return ["と、扉なら　奥に　あるけど・・・。", "ど、どうせ、　あ　あかないよ！。","",
+                        "いちども　開いたことなんか　ないんだから！","","",
+                        "は、はやく　探さないと。。。","もう、　どこ・・・？","あ　あなたたち、　幻覚なら　早く　消えてよね！"]
             if self.rtn_txt_no == 1:
-                self.rtn_txt_no = 0
-                self.name_disp = True
                 self.setFlgWaitingResponce()
                 self.branch_no += 1
-                return ["あああああああたし、ジェリコ！", "あなたは？",""]
-        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no == 3) and (self.branch_no == 1)):
+                self.rtn_txt_no = 0
+                return ["しつこい　幻覚ね・・・。", "ねえ　わ、私の幻覚ならさ　手伝ってよ。","私の手じゃ　探し回るのも　大変でさ・・・。"]
+        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no == 3) and (self.branch_no == 2)):
             if self.rtn_txt_no == 0:
                 self.cancelFlgWaitingResponce()
-                return ["よよよ よろしくお願いします・・・。","わわ、わたしもう３年も魚やカエルとしか話してなくて・・・","お会いできて ほほほ 本当にうれしいです。"]
-
+                return ["え？　このすがた？","いつから・・・？","・・・・・・。　どれぐらい　経ったんだろう・・・。",
+                        "木が　見えるでしょ？　あの枝や幹に　なる実を食べたの。","ある日起きたら　触手がひとつ生えてて・・・。","だんだん増えて　水が冷たく　感じなくなったの・・・。"]
+        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no == 3) and (self.branch_no == 3)):
+            if self.rtn_txt_no == 0:
+                self.cancelFlgWaitingResponce()
+                return ["どこ　いっちゃったんだろう・・・。","",""]
+        ### ◆シーン１　ー後続シナリオ
+        if ((self.scene_no == C_SCENE_WATER) and (self.scenario_no >= 4) and (self.branch_no >= 0)):
+            if self.rtn_txt_no == 0:
+                self.cancelFlgWaitingResponce()
+                return ["あっ　あ　","ここっこ　こんにちわ・・・","お手伝いできること　あれば　な、なんでも　言ってね。"]
